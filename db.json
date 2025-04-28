@@ -1,0 +1,141 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "patient@example.com",
+      "password": "password123",
+      "roles": ["PATIENT"],
+      "createdAt": "2024-01-08T15:53:15.000Z",
+      "name": "Patient User",
+      "profile": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "dateOfBirth": "1990-05-15",
+        "gender": "Male",
+        "contactNumber": "+1234567890"
+      }
+    },
+    {
+      "id": 2,
+      "email": "doctor@example.com",
+      "password": "password123",
+      "roles": ["DOCTOR"],
+      "createdAt": "2024-01-08T15:53:15.000Z",
+      "name": "Dr. Emily Johnson",
+      "profile": {
+        "firstName": "Emily",
+        "lastName": "Johnson",
+        "specialization": "General Medicine",
+        "licenseNumber": "MD12345",
+        "contactNumber": "+1987654321"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Nurse Sarah Williams",
+      "email": "nurse@example.com",
+      "password": "nurse123", 
+      "roles": ["NURSE"],
+      "profile": {
+        "firstName": "Sarah",
+        "lastName": "Williams",
+        "certification": "Registered Nurse",
+        "licenseNumber": "RN67890",
+        "department": "Emergency Care"
+      }
+    },
+    {
+      "id": 4,
+      "name": "Admin User",
+      "email": "admin@example.com",
+      "password": "admin123",
+      "roles": ["ADMIN"],
+      "profile": {
+        "firstName": "System",
+        "lastName": "Administrator",
+        "department": "Hospital Management"
+      }
+    }
+  ],
+  "patients": [
+    {
+      "id": 1,
+      "userId": 1,
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "patient@example.com",
+      "phone": "123-456-7890",
+      "address": "123 Main St",
+      "dateOfBirth": "1990-01-01",
+      "emergencyContact": "Jane Doe - 123-456-7891",
+      "createdAt": "2024-01-08T15:53:15.000Z",
+      "medicalHistory": [],
+      "currentMedications": [],
+      "allergies": []
+    }
+  ],
+  "doctors": [
+    {
+      "id": 1,
+      "userId": 2,
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "doctor@example.com",
+      "specialization": "General Medicine",
+      "phone": "123-456-7892",
+      "createdAt": "2024-01-08T15:53:15.000Z",
+      "department": "General Medicine",
+      "availableSlots": [
+        {"day": "Monday", "time": "09:00-12:00"},
+        {"day": "Wednesday", "time": "14:00-17:00"}
+      ]
+    }
+  ],
+  "nurses": [
+    {
+      "id": 1, 
+      "userId": 3,
+      "department": "Emergency Care",
+      "shifts": [
+        {"day": "Tuesday", "time": "07:00-15:00"},
+        {"day": "Friday", "time": "15:00-23:00"}
+      ]
+    }
+  ],
+  "appointments": [
+    {
+      "id": 1,
+      "patientId": 1,
+      "doctorId": 1,
+      "doctorName": "Dr. Jane Smith",
+      "date": "2024-01-15",
+      "time": "10:00 AM",
+      "status": "SCHEDULED",
+      "createdAt": "2024-01-08T15:53:15.000Z"
+    }
+  ],
+  "prescriptions": [
+    {
+      "id": 1,
+      "patientId": 1,
+      "doctorId": 1,
+      "medicationName": "Amoxicillin",
+      "dosage": "500mg",
+      "instructions": "Take twice daily with food",
+      "startDate": "2024-01-08",
+      "endDate": "2024-01-15",
+      "createdAt": "2024-01-08T15:53:15.000Z"
+    }
+  ],
+  "bills": [
+    {
+      "id": 1,
+      "patientId": 1,
+      "invoiceNumber": "INV-2024-001",
+      "amount": 150.00,
+      "status": "PENDING",
+      "dueDate": "2024-02-08",
+      "createdAt": "2024-01-08T15:53:15.000Z"
+    }
+  ]
+}

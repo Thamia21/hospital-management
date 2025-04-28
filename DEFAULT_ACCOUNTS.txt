@@ -1,0 +1,28 @@
+# Default Accounts for Hospital Management System
+
+This file explains the default user accounts available in this project for different roles. These accounts can be used to log in and test the system functionalities for each user type.
+
+## 1. Admin Account
+- **Email:** admin@hospital.com
+- **Password:** Admin@123
+- **Role:** ADMIN
+
+## 2. Doctor Account
+- **Email:** doctor@hospital.com
+- **Password:** Doctor@123
+- **Role:** DOCTOR
+
+## 3. Nurse Account
+- **Email:** nurse@hospital.com
+- **Password:** Nurse@123
+- **Role:** NURSE
+
+## 4. Patient Account
+- **Email:** patient@hospital.com
+- **Password:** Patient@123
+- **Role:** PATIENT
+
+**Note:**
+- All accounts use email registration type.
+- These accounts are pre-configured for demonstration and testing purposes.
+- Please change the passwords after initial login for security in production environments.

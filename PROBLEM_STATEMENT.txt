@@ -1,0 +1,28 @@
+# Problem Statement: Hospital Management System
+
+## Background
+Many hospitals and healthcare facilities currently rely on manual, paper-based systems or fragmented digital solutions to manage their day-to-day operations. These systems are often inefficient, error-prone, and unable to keep up with the increasing demands of modern healthcare.
+
+## Current System/Structure
+The existing system in most hospitals involves:
+- Manual registration of patients using paper forms.
+- Physical storage of medical records, which are prone to loss or damage.
+- Appointment scheduling done via phone calls or in-person, leading to double bookings or missed appointments.
+- Communication between doctors, nurses, and patients is often informal and lacks a centralized platform.
+- Billing and inventory management are handled separately, increasing administrative overhead.
+
+## Challenges with the Current System
+1. **Inefficiency:** Manual processes are time-consuming and lead to delays in patient care and administrative tasks.
+2. **Data Inaccuracy:** Human errors in data entry and record-keeping can compromise patient safety and service quality.
+3. **Lack of Integration:** Disconnected systems make it difficult to access comprehensive patient information quickly.
+4. **Security Risks:** Paper records and unprotected digital files are vulnerable to unauthorized access, loss, or damage.
+5. **Difficulty in Communication:** Lack of a unified communication channel among staff and patients leads to miscommunication and operational bottlenecks.
+6. **Limited Reporting:** Generating reports and analytics for decision-making is cumbersome and often inaccurate.
+
+## Purpose of the Hospital Management System
+To address these challenges, this Hospital Management System was developed to:
+- Digitize and centralize patient records and hospital operations.
+- Improve efficiency, accuracy, and security of healthcare data.
+- Enhance communication among healthcare providers and patients.
+- Simplify appointment scheduling, billing, and reporting processes.
+- Provide a scalable solution adaptable to the evolving needs of healthcare facilities.

@@ -1,0 +1,119 @@
+.nurse-dashboard {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.nurse-dashboard__sidebar {
+  width: 240px; /* Ensure sidebar width is defined */
+  flex-shrink: 0;
+  background-color: #fff; /* Sidebar background */
+  border-right: 1px solid #ddd; /* Optional for better UI separation */
+}
+
+.nurse-dashboard__main {
+  flex-grow: 1;
+  height: 100vh;
+  overflow: auto;
+  background-color: #f4f6f8;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 24px;
+}
+
+.nurse-dashboard__content {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto; /* Center content */
+}
+
+.nurse-dashboard__header {
+  margin-bottom: 16px;
+}
+
+.nurse-dashboard__title {
+  font-weight: bold;
+  color: #1976d2;
+  margin-bottom: 8px;
+}
+
+.nurse-dashboard__welcome {
+  color: #666;
+  margin-bottom: 16px;
+}
+
+.nurse-dashboard__stats-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.nurse-dashboard__stats-card {
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 8px;
+  min-height: 120px;
+  flex: 1; /* Allows cards to resize properly */
+  max-width: 250px;
+  text-align: center;
+}
+
+.nurse-dashboard__stats-title {
+  font-size: 1rem;
+}
+
+.nurse-dashboard__stats-value {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+/* Responsive styles */
+@media (min-width: 768px) {
+  .nurse-dashboard__main {
+    margin-left: 240px; /* Ensures sidebar spacing */
+    width: calc(100% - 240px);
+  }
+
+  .nurse-dashboard__stats-title {
+    font-size: 1.25rem;
+  }
+
+  .nurse-dashboard__stats-value {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .nurse-dashboard {
+    flex-direction: column;
+  }
+
+  .nurse-dashboard__sidebar {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: auto;
+    z-index: 1000;
+  }
+
+  .nurse-dashboard__main {
+    margin-left: 0;
+    width: 100%;
+    padding-top: 60px; /* Space for fixed sidebar */
+  }
+
+  .nurse-dashboard__stats-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .nurse-dashboard__stats-card {
+    max-width: 100%;
+  }
+}
