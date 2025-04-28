@@ -2,7 +2,8 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyCmkdIhHv2_UBtFMedXZKoetSjHWcODybM',
+  // apiKey should be provided via environment variables or deployment secrets
+  apiKey: process.env.VITE_FIREBASE_API_KEY || '',
   authDomain: 'hospital-management-syst-c8311.firebaseapp.com',
   projectId: 'hospital-management-syst-c8311',
   storageBucket: 'hospital-management-syst-c8311.firebasestorage.app',
