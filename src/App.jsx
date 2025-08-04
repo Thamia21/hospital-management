@@ -14,41 +14,73 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoadingProvider } from './context/LoadingContext';
 import { ErrorProvider } from './context/ErrorContext';
 import { RealTimeProvider } from './context/RealTimeContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 
 // Layouts
 import MainLayout from './components/layout/MainLayout';
 import PatientLayout from './components/layout/PatientLayout';
+import DoctorLayout from './components/layout/DoctorLayout';
+import AdminLayout from './components/layout/AdminLayout';
 import SuspenseFallback from './components/loading/SuspenseFallback';
 
-// Pages
-import Dashboard from './pages/Dashboard';
-import DoctorDashboard from './pages/DoctorDashboard';
-import Patients from './pages/Patients';
-import Doctors from './pages/Doctors';
-import Appointments from './pages/Appointments';
-import Pharmacy from './pages/Pharmacy';
-import Billing from './pages/Billing';
-import Login from './pages/Login';
-import AdminLogin from './pages/AdminLogin';
-import Profile from './pages/Profile';
-import Unauthorized from './pages/Unauthorized';
-import PatientRegistration from './pages/PatientRegistration';
-import PatientPortal from './pages/PatientPortal';
-import BookAppointment from './pages/BookAppointment';
-import PatientDetails from './pages/PatientDetails';
-import Settings from './pages/Settings';
-import NurseDashboard from './pages/NurseDashboard';
-import Tasks from './pages/Tasks';
-import MedicalRecords from './pages/MedicalRecords';
-import Messages from './pages/Messages';
-import VerifyEmail from './pages/VerifyEmail';
-import AddStaff from './pages/AddStaff';
-import StaffManagement from './pages/StaffManagement';
-import AdminDashboard from './pages/AdminDashboard';
+// Auth Pages
+import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
+import AdminLogin from './pages/admin/AdminLogin';
+import VerifyEmail from './pages/auth/VerifyEmail';
+import SetPassword from './pages/auth/SetPassword';
+import PatientRegistration from './pages/patient/PatientRegistration';
 
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
+// Admin Pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AddStaff from './pages/admin/AddStaff';
+import StaffManagement from './pages/admin/StaffManagement';
+import FacilityManagement from './pages/admin/FacilityManagement';
+import LeaveManagement from './pages/admin/LeaveManagement';
+
+// Doctor Pages
+import DoctorDashboard from './pages/doctor/DoctorDashboard';
+import DoctorMessages from './pages/doctor/DoctorMessages';
+import DoctorAppointments from './pages/doctor/DoctorAppointments';
+import DoctorPatients from './pages/doctor/DoctorPatients';
+import DoctorProfile from './pages/doctor/DoctorProfile';
+
+// Nurse Pages
+import NurseDashboard from './pages/nurse/NurseDashboard';
+import Tasks from './pages/nurse/Tasks';
+
+// Patient Pages
+import PatientPortal from './pages/patient/PatientPortal';
+import PatientDashboard from './pages/patient/PatientDashboard';
+import TestPatientDashboard from './pages/patient/TestPatientDashboard';
+import PatientDetails from './pages/patient/PatientDetails';
+import BookAppointment from './pages/patient/BookAppointment';
+import MedicalRecords from './pages/patient/MedicalRecords';
+import PatientMedicalRecords from './pages/patient/PatientMedicalRecords.jsx';
+import PatientSettings from './pages/patient/PatientSettings.jsx';
+import PatientProfile from './pages/patient/PatientProfile.jsx';
+import PatientAppointments from './pages/patient/PatientAppointments';
+import TestResults from './pages/patient/TestResults';
+import PatientPrescriptions from './pages/patient/PatientPrescriptions';
+import PatientBilling from './pages/patient/PatientBilling';
+import HealthSummary from './pages/patient/HealthSummary';
+import PatientMessages from './pages/patient/PatientMessages';
+
+// Shared Pages
+import Dashboard from './pages/shared/Dashboard';
+// Import Patients component with explicit .jsx extension to ensure correct resolution
+import Patients from './pages/shared/Patients.jsx';
+import Doctors from './pages/shared/Doctors.jsx';
+import Pharmacy from './pages/shared/Pharmacy.jsx';
+import Billing from './pages/shared/Billing.jsx';
+import Profile from './pages/shared/Profile.jsx';
+import Settings from './pages/shared/Settings.jsx';
+import Messages from './pages/shared/Messages.jsx';
+import Unauthorized from './pages/shared/Unauthorized.jsx';
+
+const ForgotPassword = React.lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('./pages/auth/ResetPassword'));
 
 // Create a custom theme
 const theme = createTheme({
@@ -119,14 +151,15 @@ function App() {
   const queryClient = createQueryClient();
 
   return (
-    <AuthProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-          <QueryClientProvider client={queryClient}>
-            <LoadingProvider>
-              <ErrorProvider>
-                <RealTimeProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <LocalizationProvider dateAdapter={AdapterDateFns}>
+            <QueryClientProvider client={queryClient}>
+              <LoadingProvider>
+                <ErrorProvider>
+                  <RealTimeProvider>
                   <>
                     <Router>
                       <Suspense fallback={<SuspenseFallback />}>
@@ -156,7 +189,8 @@ function App() {
         draggable
         pauseOnHover
       />
-    </AuthProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 
@@ -194,39 +228,57 @@ function AppRoutes() {
       } />
       <Route path="/admin/login" element={<AdminLogin />} />
        <Route path="/register" element={
-        user ? <RootRedirect /> : <PatientRegistration />
+        user ? <RootRedirect /> : <Register />
       } />
       <Route path="/forgot-password" element={<Suspense fallback={null}><ForgotPassword /></Suspense>} />
       <Route path="/reset-password" element={<Suspense fallback={null}><ResetPassword /></Suspense>} />
       <Route path="/verify-email" element={<VerifyEmail />} />
-      <Route
-        path="/admin/add-staff"
-        element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
-            <AddStaff />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/staff-management"
-        element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
-            <StaffManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute allowedRoles={["ADMIN"]}>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
+      <Route element={<AdminLayout />}>
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/add-staff"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AddStaff />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/staff-management"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <StaffManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/facilities"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <FacilityManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/leave-management"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <LeaveManagement />
+            </ProtectedRoute>
+          }
+        />
+      </Route>
       <Route path="/unauthorized" element={<Unauthorized />} />
-      {/* Messages Route */}
+      {/* Messages Routes */}
       <Route path="/messages" element={
-        <ProtectedRoute allowedRoles={['ADMIN', 'DOCTOR', 'PATIENT', 'NURSE']}>
+        <ProtectedRoute allowedRoles={['PATIENT']}>
           <Messages />
         </ProtectedRoute>
       } />
@@ -240,18 +292,6 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
-        {/* Doctor Dashboard */}
-        <Route path="/doctor-dashboard" element={
-          <ProtectedRoute allowedRoles={['DOCTOR']}>
-            <DoctorDashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/patient/:patientId" element={
-          <ProtectedRoute allowedRoles={['DOCTOR']}>
-            <PatientDetails />
-          </ProtectedRoute>
-        } />
-
         {/* Nurse Dashboard */}
         <Route path="/nurse-dashboard" element={
           <ProtectedRoute allowedRoles={['NURSE']}>
@@ -260,13 +300,13 @@ function AppRoutes() {
         } />
 
         <Route path="/appointments" element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'DOCTOR', 'NURSE']}>
-            <Appointments />
+          <ProtectedRoute allowedRoles={['ADMIN', 'NURSE']}>
+            <DoctorAppointments />
           </ProtectedRoute>
         } />
 
         <Route path="/patients" element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'DOCTOR', 'NURSE']}>
+          <ProtectedRoute allowedRoles={['ADMIN', 'NURSE']}>
             <Patients />
           </ProtectedRoute>
         } />
@@ -301,33 +341,144 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
       </Route>
+      <Route path="/set-password" element={<SetPassword />} />
+
+      {/* Doctor Routes */}
+      <Route element={<DoctorLayout />}>
+        <Route path="/doctor-dashboard" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <DoctorDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-patients" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <DoctorPatients />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-appointments" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <DoctorAppointments />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-messages" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <DoctorMessages />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-prescriptions" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <MedicalRecords />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-medical-records" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <MedicalRecords />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-consultations" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <DoctorMessages />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-reports" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <DoctorMessages />
+          </ProtectedRoute>
+        } />
+        <Route path="/patient/:patientId" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <PatientDetails />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-profile" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <DoctorProfile />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor-settings" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <Settings />
+          </ProtectedRoute>
+        } />
+      </Route>
 
       {/* Patient Routes */}
       <Route element={<PatientLayout />}>
         <Route path="/patient-portal" element={
-          <ProtectedRoute allowedRoles={['patient', 'PATIENT']}>
-            <PatientPortal />
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/patient-dashboard" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/test-patient-dashboard" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <TestPatientDashboard />
           </ProtectedRoute>
         } />
         <Route path="/book-appointment" element={
-          <ProtectedRoute allowedRoles={['patient', 'PATIENT']}>
+          <ProtectedRoute allowedRoles={['PATIENT']}>
             <BookAppointment />
           </ProtectedRoute>
         } />
+        <Route path="/appointments" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientAppointments />
+          </ProtectedRoute>
+        } />
+        <Route path="/test-results" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <TestResults />
+          </ProtectedRoute>
+        } />
+        <Route path="/patient-prescriptions" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientPrescriptions />
+          </ProtectedRoute>
+        } />
+        <Route path="/patient-billing" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientBilling />
+          </ProtectedRoute>
+        } />
+        <Route path="/health-summary" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <HealthSummary />
+          </ProtectedRoute>
+        } />
+        <Route path="/patient-messages" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientMessages />
+          </ProtectedRoute>
+        } />
+        <Route path="/patient-medical-records" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientMedicalRecords />
+          </ProtectedRoute>
+        } />
         <Route path="/settings" element={
-          <ProtectedRoute allowedRoles={['patient', 'PATIENT']}>
-            <Settings />
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientSettings />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute allowedRoles={['PATIENT']}>
+            <PatientProfile />
           </ProtectedRoute>
         } />
       </Route>
 
       {/* Common Routes */}
       <Route element={<MainLayout />}>
-        <Route path="/profile" element={
+        {/* Profile route moved to patient-specific routes */}
+        {/* <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
-        } />
+        } /> */}
 
         {/* Default Routes */}
         <Route path="/" element={<RootRedirect />} />

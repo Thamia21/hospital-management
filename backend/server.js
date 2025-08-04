@@ -10,6 +10,16 @@ app.use(cors());
 
 // Auth routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/auth/set-password', require('./routes/setPasswordRoutes'));
+
+// Facility routes
+app.use('/api/facilities', require('./routes/facilityRoutes'));
+
+// Chat and message routes
+app.use('/api/chats', require('./routes/chatRoutes'));
+
+// Patient routes
+app.use('/api/patients', require('./routes/patientRoutes'));
 
 // MongoDB connection
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/hospital_management';
@@ -55,7 +65,8 @@ app.get('/verify-email', async (req, res) => {
     await user.save();
     
     console.log('User verified successfully:', user.email);
-    return res.send(`<h1>Email Verified!</h1><p>Your email has been verified successfully.</p><p>Your User ID: <strong>${user.userId}</strong></p><p>You can now <a href="http://localhost:5173/login">login to your account</a>.</p>`);
+    // Redirect to frontend with success message
+    return res.redirect(`http://localhost:5173/verify-email?token=${token}&verified=true`);
   } catch (err) {
     console.error('Verification error:', err);
     return res.status(500).send('<h1>Verification Error</h1><p>An error occurred during verification.</p><a href="http://localhost:5173/login">Go to Login</a>');
@@ -65,6 +76,8 @@ app.get('/verify-email', async (req, res) => {
 // API routes
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/appointments', require('./routes/appointmentRoutes'));
+app.use('/api/patients', require('./routes/patientRoutes'));
+app.use('/api/leave', require('./routes/leaveRoutes'));
 
 // Global error handler
 app.use((err, req, res, next) => {

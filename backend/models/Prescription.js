@@ -1,0 +1,61 @@
+const mongoose = require('mongoose');
+
+const prescriptionSchema = new mongoose.Schema({
+  patientId: {
+    type: String,
+    required: true,
+    index: true
+  },
+  doctorId: {
+    type: String,
+    required: true
+  },
+  doctorName: {
+    type: String,
+    required: true
+  },
+  medication: {
+    type: String,
+    required: true
+  },
+  dosage: {
+    type: String,
+    required: true
+  },
+  frequency: {
+    type: String,
+    required: true
+  },
+  duration: {
+    type: String,
+    required: true
+  },
+  instructions: {
+    type: String,
+    default: ''
+  },
+  status: {
+    type: String,
+    enum: ['active', 'completed', 'cancelled'],
+    default: 'active'
+  },
+  prescribedDate: {
+    type: Date,
+    default: Date.now
+  },
+  startDate: {
+    type: Date,
+    default: Date.now
+  },
+  endDate: {
+    type: Date
+  },
+  refillsRemaining: {
+    type: Number,
+    default: 0
+  }
+}, {
+  timestamps: true
+});
+
+module.exports = mongoose.model('Prescription', prescriptionSchema);

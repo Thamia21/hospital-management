@@ -1,0 +1,112 @@
+.sidebar-root {
+  height: 100vh;
+  background: #fff;
+  color: #222;
+  box-shadow: 2px 0 16px rgba(30, 60, 120, 0.08);
+  border-radius: 0 24px 24px 0;
+  border-right: 1px solid #e3e7ef;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  font-weight: bold;
+  font-size: 1.3rem;
+  letter-spacing: 1px;
+  background: #fff;
+  color: #1976d2;
+  border-bottom: 1px solid #e3e7ef;
+}
+
+.sidebar-list {
+  margin-top: 12px;
+  flex: 1;
+  padding: 0 8px;
+}
+
+.sidebar-listitem {
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: background 0.18s, color 0.18s;
+  color: #222;
+  font-weight: 500;
+  padding-left: 14px;
+  padding-right: 10px;
+}
+
+.sidebar-listitem.active {
+  background: linear-gradient(90deg, #1976d2 60%, #42a5f5 100%);
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.10);
+}
+
+.sidebar-listitem.active .MuiListItemIcon-root {
+  color: #fff !important;
+}
+
+.sidebar-listitem:hover {
+  background: #e3f0fd;
+  color: #1976d2;
+}
+
+.sidebar-listitem .MuiListItemIcon-root {
+  color: #1976d2;
+  min-width: 36px;
+}
+
+.logout-btn {
+  margin: 18px 18px 24px 18px;
+  background: linear-gradient(90deg, #1976d2 70%, #42a5f5 100%);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.12);
+  transition: background 0.18s;
+}
+.logout-btn:hover {
+  background: #1565c0;
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .sidebar-root {
+    width: 100vw;
+    height: auto;
+    display: flex;
+    flex-direction: row;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 1200;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: 0 -2px 8px rgba(30,60,120,0.08);
+  }
+  .sidebar-header {
+    display: none;
+  }
+  .sidebar-list {
+    flex-direction: row;
+    display: flex;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+  }
+  .sidebar-listitem {
+    flex: 1;
+    margin: 0;
+    border-radius: 0;
+    justify-content: center;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .logout-btn {
+    display: none;
+  }
+}

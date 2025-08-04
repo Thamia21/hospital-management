@@ -4,12 +4,36 @@ const userSchema = new mongoose.Schema({
   userId: { type: String, unique: true },
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  phone: { type: String },
+  phoneNumber: { type: String }, // Keep for backwards compatibility
+  password: { type: String },
   role: { type: String, enum: ['ADMIN', 'DOCTOR', 'NURSE', 'PATIENT'], required: true },
+  
+  // Patient-specific fields
+  idNumber: { type: String },
+  dateOfBirth: { type: Date },
+  gender: { type: String, enum: ['male', 'female', 'other', 'prefer-not-to-say'] },
+  address: { type: String },
+  emergencyContact: { type: String },
+  emergencyPhone: { type: String },
+  
+  // Professional fields (Doctor/Nurse)
+  licenseNumber: { type: String },
+  specialization: { type: String },
+  department: { type: String },
+  qualifications: { type: String },
+  experience: { type: String },
+  
+  // Facility associations
+  facilityIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Facility' }],
+  facilityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Facility' },
+  
+  // Verification and security
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
+  
   createdAt: { type: Date, default: Date.now },
 });
 

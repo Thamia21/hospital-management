@@ -1,0 +1,548 @@
+SYSTEM REQUIREMENTS SPECIFICATION (SRS)
+HOSPITAL MANAGEMENT SYSTEM - PART 3
+
+Document Version: 1.0
+Date: July 31, 2025
+Prepared by: Development Team
+Project: Hospital Management System
+
+================================================================================
+CONTINUATION FROM PART 2
+================================================================================
+
+4. SYSTEM FEATURES
+================================================================================
+
+4.1 SYSTEM FEATURE 1: USER AUTHENTICATION AND AUTHORIZATION
+-----------------------------------------------------------
+
+**Feature ID**: SF-001
+**Priority**: High
+**Risk**: High
+
+**4.1.1 Description and Priority**
+
+The User Authentication and Authorization system is the foundational security 
+feature that controls access to the Hospital Management System. This feature 
+ensures that only authorized users can access the system and that each user 
+can only perform actions appropriate to their role and permissions.
+
+**Priority Justification:**
+This feature has the highest priority because:
+- Security is paramount in healthcare systems handling sensitive patient data
+- All other system features depend on proper user authentication
+- Regulatory compliance (POPIA) requires strict access controls
+- System integrity depends on proper authorization mechanisms
+
+**4.1.2 Stimulus/Response Sequences**
+
+**Sequence 1: User Registration**
+1. **Stimulus**: New user accesses registration page
+2. **Response**: System displays multi-step registration form
+3. **Stimulus**: User selects role (Patient, Doctor, Nurse, Admin)
+4. **Response**: System displays role-specific form fields
+5. **Stimulus**: User submits completed registration form
+6. **Response**: System validates data and creates user account
+7. **Response**: System sends email verification link
+8. **Response**: System displays verification pending message
+
+**Sequence 2: User Login**
+1. **Stimulus**: User enters email/username and password
+2. **Response**: System validates credentials against database
+3. **Response**: System checks if account is verified
+4. **Response**: System generates JWT token for authenticated user
+5. **Response**: System redirects user to appropriate dashboard
+6. **Response**: System logs successful authentication event
+
+**Sequence 3: Password Recovery**
+1. **Stimulus**: User clicks "Forgot Password" link
+2. **Response**: System displays email input form
+3. **Stimulus**: User enters email address
+4. **Response**: System validates email exists in database
+5. **Response**: System generates secure reset token
+6. **Response**: System sends password reset email
+7. **Response**: System displays confirmation message
+
+**4.1.3 Functional Requirements**
+
+**FR-001.1: User Registration**
+- System shall allow new users to register with role selection
+- System shall validate all required fields before account creation
+- System shall generate unique user IDs based on role prefix
+- System shall hash passwords using bcrypt with salt rounds
+- System shall send email verification upon successful registration
+- System shall prevent duplicate email addresses in the system
+
+**FR-001.2: User Authentication**
+- System shall authenticate users using email/username and password
+- System shall verify account email verification status before login
+- System shall generate JWT tokens for authenticated sessions
+- System shall implement session timeout after 12 hours of inactivity
+- System shall log all authentication attempts for security monitoring
+- System shall implement account lockout after 5 failed login attempts
+
+**FR-001.3: Role-Based Authorization**
+- System shall implement four user roles: Patient, Doctor, Nurse, Administrator
+- System shall restrict access to features based on user roles
+- System shall validate user permissions for each API request
+- System shall provide role-specific dashboards and navigation
+- System shall allow administrators to modify user roles
+- System shall maintain audit trail of role changes
+
+**FR-001.4: Password Management**
+- System shall enforce strong password requirements (8+ characters, mixed case, numbers)
+- System shall provide secure password reset functionality
+- System shall allow users to change passwords with current password verification
+- System shall prevent password reuse for last 5 passwords
+- System shall expire passwords after 90 days for staff accounts
+- System shall notify users of upcoming password expiration
+
+**4.1.4 Non-Functional Requirements**
+
+**NFR-001.1: Security**
+- All passwords must be hashed using bcrypt with minimum 10 salt rounds
+- JWT tokens must use HS256 algorithm with secure secret key
+- Session tokens must expire after 12 hours maximum
+- All authentication communications must use HTTPS encryption
+- Failed login attempts must be logged and monitored
+
+**NFR-001.2: Performance**
+- Authentication response time must not exceed 2 seconds
+- Password hashing must complete within 1 second
+- JWT token validation must complete within 100 milliseconds
+- System must support 100 concurrent authentication requests
+- Database queries for user lookup must complete within 500 milliseconds
+
+**NFR-001.3: Reliability**
+- Authentication system must have 99.9% uptime availability
+- System must gracefully handle database connection failures
+- Authentication failures must not expose sensitive information
+- System must maintain consistent state during concurrent operations
+- Backup authentication mechanisms must be available
+
+4.2 SYSTEM FEATURE 2: PATIENT MANAGEMENT
+----------------------------------------
+
+**Feature ID**: SF-002
+**Priority**: High
+**Risk**: Medium
+
+**4.2.1 Description and Priority**
+
+The Patient Management system provides comprehensive functionality for managing 
+patient information, medical records, and healthcare data. This feature serves 
+as the central repository for all patient-related information and enables 
+healthcare providers to access, update, and manage patient data efficiently.
+
+**Priority Justification:**
+- Core functionality essential for healthcare operations
+- Foundation for appointment scheduling and medical records
+- Critical for regulatory compliance and patient safety
+- Required for billing and insurance processing
+
+**4.2.2 Stimulus/Response Sequences**
+
+**Sequence 1: Patient Registration**
+1. **Stimulus**: Staff member initiates new patient registration
+2. **Response**: System displays patient registration form
+3. **Stimulus**: Staff enters patient demographic information
+4. **Response**: System validates and stores patient data
+5. **Response**: System generates unique patient ID
+6. **Response**: System creates patient medical record
+7. **Response**: System displays confirmation with patient ID
+
+**Sequence 2: Patient Search and Retrieval**
+1. **Stimulus**: User searches for patient by name, ID, or phone
+2. **Response**: System queries database with search criteria
+3. **Response**: System displays list of matching patients
+4. **Stimulus**: User selects specific patient from results
+5. **Response**: System loads complete patient profile
+6. **Response**: System displays patient information with tabs
+7. **Response**: System logs patient record access
+
+**4.2.3 Functional Requirements**
+
+**FR-002.1: Patient Registration**
+- System shall capture comprehensive patient demographic information
+- System shall generate unique patient identifiers automatically
+- System shall validate South African ID numbers and phone numbers
+- System shall support multiple emergency contacts per patient
+- System shall capture insurance and medical aid information
+- System shall create initial medical record upon registration
+
+**FR-002.2: Patient Information Management**
+- System shall allow authorized users to update patient information
+- System shall maintain complete audit trail of all changes
+- System shall support patient photo upload and management
+- System shall validate data integrity and format requirements
+- System shall prevent deletion of patient records (soft delete only)
+- System shall support patient data export for regulatory compliance
+
+**FR-002.3: Medical History Tracking**
+- System shall maintain comprehensive medical history for each patient
+- System shall support chronic condition tracking and management
+- System shall record allergies and adverse reactions
+- System shall track family medical history
+- System shall support medical document attachment and storage
+- System shall provide timeline view of medical events
+
+**FR-002.4: Patient Search and Access**
+- System shall provide multiple search criteria (name, ID, phone, email)
+- System shall support partial matching and fuzzy search
+- System shall implement role-based access to patient information
+- System shall log all patient record access for audit purposes
+- System shall provide quick access to frequently viewed patients
+- System shall support advanced filtering and sorting options
+
+4.3 SYSTEM FEATURE 3: APPOINTMENT MANAGEMENT
+--------------------------------------------
+
+**Feature ID**: SF-003
+**Priority**: High
+**Risk**: Medium
+
+**4.3.1 Description and Priority**
+
+The Appointment Management system handles scheduling, modification, and tracking 
+of patient appointments with healthcare providers. This feature includes calendar 
+management, availability tracking, conflict detection, and automated notifications.
+
+**Priority Justification:**
+- Essential for hospital operations and patient care coordination
+- Directly impacts patient satisfaction and healthcare efficiency
+- Required for resource allocation and staff scheduling
+- Critical for reducing wait times and optimizing provider schedules
+
+**4.3.2 Stimulus/Response Sequences**
+
+**Sequence 1: Appointment Booking**
+1. **Stimulus**: Patient or staff initiates appointment booking
+2. **Response**: System displays available providers and specializations
+3. **Stimulus**: User selects healthcare provider
+4. **Response**: System displays provider's available time slots
+5. **Stimulus**: User selects preferred date and time
+6. **Response**: System validates availability and creates appointment
+7. **Response**: System sends confirmation email to patient
+8. **Response**: System updates provider's calendar
+
+**Sequence 2: Appointment Modification**
+1. **Stimulus**: User requests appointment modification
+2. **Response**: System displays current appointment details
+3. **Stimulus**: User modifies date, time, or provider
+4. **Response**: System checks new time slot availability
+5. **Response**: System updates appointment with new details
+6. **Response**: System sends modification notification to all parties
+7. **Response**: System logs appointment change in audit trail
+
+**4.3.3 Functional Requirements**
+
+**FR-003.1: Appointment Scheduling**
+- System shall display provider availability in real-time
+- System shall prevent double-booking of time slots
+- System shall support recurring appointment scheduling
+- System shall accommodate emergency and urgent appointments
+- System shall calculate and display estimated wait times
+- System shall support appointment booking up to 6 months in advance
+
+**FR-003.2: Calendar Management**
+- System shall provide multiple calendar views (daily, weekly, monthly)
+- System shall support provider schedule management
+- System shall handle provider leave and unavailability
+- System shall support appointment color coding by type/status
+- System shall provide calendar synchronization capabilities
+- System shall support appointment drag-and-drop rescheduling
+
+**FR-003.3: Notification System**
+- System shall send appointment confirmations via email
+- System shall send reminder notifications 24 hours before appointments
+- System shall notify providers of new appointments
+- System shall send cancellation notifications to all parties
+- System shall support SMS notifications (future enhancement)
+- System shall provide notification preference management
+
+4.4 SYSTEM FEATURE 4: MEDICAL RECORDS MANAGEMENT
+------------------------------------------------
+
+**Feature ID**: SF-004
+**Priority**: High
+**Risk**: Medium
+
+**4.4.1 Description and Priority**
+
+The Medical Records Management system provides comprehensive electronic health 
+record (EHR) functionality, including medical history documentation, prescription 
+management, diagnostic results, and treatment planning.
+
+**Priority Justification:**
+- Core healthcare functionality for patient care
+- Required for regulatory compliance and legal documentation
+- Essential for care continuity and provider communication
+- Critical for patient safety and treatment effectiveness
+
+**4.4.2 Functional Requirements**
+
+**FR-004.1: Medical Record Documentation**
+- System shall provide structured templates for medical record entry
+- System shall support free-text notes and observations
+- System shall maintain chronological order of medical events
+- System shall support medical coding (ICD-10) integration
+- System shall provide spell-check and medical terminology assistance
+- System shall require digital signatures for completed records
+
+**FR-004.2: Prescription Management**
+- System shall provide drug database integration for prescription creation
+- System shall check for drug interactions and allergies
+- System shall support electronic prescription transmission
+- System shall track prescription history and refills
+- System shall provide dosage calculation assistance
+- System shall maintain controlled substance tracking
+
+**FR-004.3: Diagnostic Results Integration**
+- System shall support laboratory result import and display
+- System shall provide imaging study integration capabilities
+- System shall support diagnostic report attachment
+- System shall provide result trending and comparison tools
+- System shall flag abnormal results for provider attention
+- System shall maintain result history and tracking
+
+4.5 SYSTEM FEATURE 5: STAFF MANAGEMENT AND LEAVE TRACKING
+---------------------------------------------------------
+
+**Feature ID**: SF-005
+**Priority**: Medium
+**Risk**: Low
+
+**4.5.1 Description and Priority**
+
+The Staff Management and Leave Tracking system manages healthcare provider 
+information, scheduling, leave requests, and performance tracking. This feature 
+ensures adequate staffing levels and efficient resource allocation.
+
+**Priority Justification:**
+- Important for operational efficiency and staff satisfaction
+- Required for compliance with labor regulations
+- Essential for maintaining adequate patient care coverage
+- Supports financial planning and resource allocation
+
+**4.5.2 Functional Requirements**
+
+**FR-005.1: Staff Profile Management**
+- System shall maintain comprehensive staff profiles
+- System shall track professional credentials and certifications
+- System shall support department and specialization assignment
+- System shall maintain contact information and emergency contacts
+- System shall track employment history and performance
+- System shall support staff photo and document management
+
+**FR-005.2: Leave Request Management**
+- System shall provide leave request submission interface
+- System shall support multiple leave types (annual, sick, maternity, etc.)
+- System shall implement approval workflow for leave requests
+- System shall check for staffing conflicts before approval
+- System shall maintain leave balance tracking
+- System shall generate leave reports for payroll integration
+
+**FR-005.3: Staff Scheduling**
+- System shall support shift scheduling and management
+- System shall track staff availability and preferences
+- System shall provide schedule conflict detection
+- System shall support schedule modification and updates
+- System shall maintain historical scheduling data
+- System shall generate staffing reports and analytics
+
+================================================================================
+5. OTHER NONFUNCTIONAL REQUIREMENTS
+================================================================================
+
+5.1 PERFORMANCE REQUIREMENTS
+----------------------------
+
+**NFR-5.1.1: Response Time Requirements**
+- Web page loading time shall not exceed 3 seconds under normal load
+- Database query response time shall not exceed 2 seconds
+- API endpoint response time shall not exceed 1 second
+- User authentication shall complete within 2 seconds
+- File upload operations shall provide progress indicators for files > 1MB
+
+**NFR-5.1.2: Throughput Requirements**
+- System shall support minimum 100 concurrent users
+- System shall handle 1000 API requests per minute
+- Database shall support 500 transactions per second
+- System shall process 10,000 appointment bookings per day
+- Email notification system shall send 1000 emails per hour
+
+**NFR-5.1.3: Capacity Requirements**
+- System shall support 10,000 registered users initially
+- Database shall accommodate 100,000 patient records
+- System shall store 1TB of medical documents and images
+- System shall maintain 5 years of historical data online
+- System shall support scaling to 50,000 users within 2 years
+
+**NFR-5.1.4: Resource Utilization**
+- Server CPU utilization shall not exceed 80% under normal load
+- Memory usage shall not exceed 75% of available RAM
+- Database storage growth shall not exceed 10GB per month
+- Network bandwidth utilization shall not exceed 70% of capacity
+- System shall implement efficient caching mechanisms
+
+5.2 SAFETY REQUIREMENTS
+-----------------------
+
+**NFR-5.2.1: Data Safety**
+- System shall implement automated daily backups
+- System shall maintain offsite backup copies
+- System shall provide point-in-time recovery capabilities
+- System shall implement data corruption detection
+- System shall maintain backup retention for 7 years
+
+**NFR-5.2.2: Operational Safety**
+- System shall provide graceful degradation during failures
+- System shall implement circuit breakers for external dependencies
+- System shall provide health monitoring and alerting
+- System shall maintain system logs for troubleshooting
+- System shall implement disaster recovery procedures
+
+**NFR-5.2.3: Patient Safety**
+- System shall validate all medical data entry
+- System shall provide drug interaction checking
+- System shall implement allergy alert mechanisms
+- System shall maintain audit trails for all medical decisions
+- System shall provide emergency access procedures
+
+5.3 SECURITY REQUIREMENTS
+-------------------------
+
+**NFR-5.3.1: Authentication and Authorization**
+- System shall implement multi-factor authentication for administrative users
+- System shall enforce strong password policies
+- System shall implement role-based access control (RBAC)
+- System shall provide session management and timeout
+- System shall log all authentication and authorization events
+
+**NFR-5.3.2: Data Protection**
+- System shall encrypt sensitive data at rest using AES-256
+- System shall encrypt all data in transit using TLS 1.2+
+- System shall implement data masking for non-production environments
+- System shall provide secure data deletion capabilities
+- System shall comply with POPIA data protection requirements
+
+**NFR-5.3.3: Network Security**
+- System shall implement firewall protection
+- System shall use HTTPS for all communications
+- System shall implement intrusion detection and prevention
+- System shall provide VPN access for remote users
+- System shall implement DDoS protection mechanisms
+
+**NFR-5.3.4: Application Security**
+- System shall implement input validation and sanitization
+- System shall prevent SQL injection and XSS attacks
+- System shall implement CSRF protection
+- System shall provide secure error handling
+- System shall implement security headers and policies
+
+5.4 SOFTWARE QUALITY ATTRIBUTES
+-------------------------------
+
+**NFR-5.4.1: Reliability**
+- System shall maintain 99.9% uptime availability
+- System shall have Mean Time Between Failures (MTBF) of 720 hours
+- System shall have Mean Time To Recovery (MTTR) of 4 hours
+- System shall implement automatic failover mechanisms
+- System shall provide redundancy for critical components
+
+**NFR-5.4.2: Usability**
+- System shall be learnable by new users within 2 hours of training
+- System shall provide context-sensitive help
+- System shall implement consistent user interface design
+- System shall support keyboard navigation for accessibility
+- System shall provide multi-language support
+
+**NFR-5.4.3: Maintainability**
+- System shall be modular with clear separation of concerns
+- System shall provide comprehensive documentation
+- System shall implement automated testing with 80% code coverage
+- System shall support hot-swappable components
+- System shall provide configuration management capabilities
+
+**NFR-5.4.4: Portability**
+- System shall run on multiple operating systems (Linux, Windows)
+- System shall support multiple database platforms
+- System shall be deployable in cloud environments
+- System shall support containerization (Docker)
+- System shall provide environment-agnostic configuration
+
+5.5 BUSINESS RULES
+-----------------
+
+**BR-5.5.1: Patient Data Rules**
+- Patient records shall never be permanently deleted
+- Patient consent shall be required for data sharing
+- Patient data access shall be logged and auditable
+- Patient information shall be kept confidential
+- Patient data retention shall comply with legal requirements
+
+**BR-5.5.2: Appointment Rules**
+- Appointments cannot be scheduled in the past
+- Appointments cannot overlap for the same provider
+- Emergency appointments can override normal scheduling rules
+- Appointment cancellations require 24-hour notice
+- No-show appointments shall be tracked and reported
+
+**BR-5.5.3: Staff Rules**
+- Staff leave requests require supervisor approval
+- Minimum staffing levels must be maintained
+- Staff credentials must be current and verified
+- Staff access rights are based on role and department
+- Staff performance data shall be confidential
+
+**BR-5.5.4: Financial Rules**
+- All billing transactions shall be auditable
+- Payment processing shall be secure and encrypted
+- Outstanding balances shall generate automatic reminders
+- Financial reports shall be accurate and timely
+- Refunds require administrative approval
+
+================================================================================
+6. OTHER REQUIREMENTS (Appendix A, B, & C)
+================================================================================
+
+**Appendix A: Regulatory Compliance Requirements**
+- South African Health Act 61 of 2003 compliance
+- Protection of Personal Information Act (POPIA) compliance
+- Medical device software regulations (future)
+- Healthcare data exchange standards (HL7 FHIR)
+- Accessibility compliance (WCAG 2.1 AA)
+
+**Appendix B: Integration Requirements**
+- Laboratory Information System (LIS) integration capability
+- Picture Archiving and Communication System (PACS) integration
+- Pharmacy Management System integration
+- Insurance and medical aid integration
+- Government health reporting system integration
+
+**Appendix C: Future Enhancement Requirements**
+- Mobile application development
+- Telemedicine capabilities
+- Artificial intelligence and machine learning integration
+- IoT medical device integration
+- Blockchain for secure health records
+
+================================================================================
+DOCUMENT APPROVAL
+================================================================================
+
+This System Requirements Specification has been reviewed and approved by:
+
+Project Manager: _________________________ Date: _____________
+
+Technical Lead: __________________________ Date: _____________
+
+Business Analyst: _______________________ Date: _____________
+
+Quality Assurance: ______________________ Date: _____________
+
+Stakeholder Representative: ______________ Date: _____________
+
+================================================================================
+END OF DOCUMENT
+================================================================================

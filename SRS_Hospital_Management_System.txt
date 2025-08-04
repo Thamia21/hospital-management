@@ -1,0 +1,138 @@
+SOFTWARE REQUIREMENTS SPECIFICATION
+For
+HOSPITAL MANAGEMENT SYSTEM
+
+1. INTRODUCTION
+1.1 Purpose
+This document describes the software requirements specification for the Hospital Management System (HMS). The system is designed to automate and streamline hospital operations, patient care, and administrative tasks.
+
+1.2 Document Conventions
+- User roles are indicated in bold (Admin, Doctor, Nurse, Patient)
+- Functional requirements are prefixed with 'FR'
+- Non-functional requirements are prefixed with 'NFR'
+
+1.3 Intended Audience
+- Hospital Administrators
+- Medical Staff (Doctors, Nurses)
+- IT Department
+- System Developers
+- End Users (Patients)
+
+1.4 Project Scope
+The HMS will provide a comprehensive solution for managing hospital operations including patient registration, appointment scheduling, medical records management, billing, and reporting.
+
+2. OVERALL DESCRIPTION
+2.1 Product Perspective
+The system is a web-based application that will integrate various hospital functions into a single platform, replacing manual and paper-based processes.
+
+2.2 User Classes and Characteristics
+- **Admin**: Full system access, manages users and system configurations
+- **Doctor**: Manages patient care, prescriptions, and medical records
+- **Nurse**: Assists in patient care, records vitals, follows doctor's instructions
+- **Patient**: Books appointments, views medical history and reports
+
+2.3 Operating Environment
+- Frontend: Web-based interface compatible with modern browsers
+- Backend: Node.js with Express.js
+- Database: JSON-based storage (with potential for SQL/NoSQL in future)
+- Supported Browsers: Latest versions of Chrome, Firefox, Safari, and Edge
+
+3. SYSTEM FEATURES AND REQUIREMENTS
+3.1 Authentication & Authorization
+FR1.1 The system shall provide user registration and login functionality
+FR1.2 The system shall implement role-based access control
+FR1.3 The system shall provide password recovery functionality
+
+3.2 Admin Portal
+FR2.1 The system shall allow admin to manage user accounts
+FR2.2 The system shall enable department management
+FR2.3 The system shall provide staff management capabilities
+FR2.4 The system shall generate system analytics and reports
+FR2.5 The system shall allow global appointment management
+
+3.3 Doctor Portal
+FR3.1 The system shall display assigned patients to doctors
+FR3.2 The system shall allow doctors to manage appointments
+FR3.3 The system shall provide access to patient medical records
+FR3.4 The system shall enable prescription management
+FR3.5 The system shall allow creating and updating treatment plans
+
+3.4 Nurse Portal
+FR4.1 The system shall display patient lists for nurses
+FR4.2 The system shall allow recording of vital signs
+FR4.3 The system shall enable updating of basic patient information
+FR4.4 The system shall display doctor's instructions
+
+3.5 Patient Portal
+FR5.1 The system shall allow patients to book and cancel appointments
+FR5.2 The system shall provide access to medical history
+FR5.3 The system shall display prescriptions
+FR5.4 The system shall show upcoming appointments
+FR5.5 The system shall allow patients to update personal information
+
+3.6 Appointment Management
+FR6.1 The system shall allow scheduling of appointments
+FR6.2 The system shall send appointment reminders
+FR6.3 The system shall handle appointment rescheduling and cancellations
+FR6.4 The system shall prevent double-booking of time slots
+
+3.7 Medical Records
+FR7.1 The system shall maintain electronic health records
+FR7.2 The system shall track patient medical history
+FR7.3 The system shall manage prescriptions and test results
+FR7.4 The system shall ensure data privacy and security
+
+4. NON-FUNCTIONAL REQUIREMENTS
+4.1 Performance
+NFR1.1 The system shall support up to 1000 concurrent users
+NFR1.2 Page load time shall not exceed 3 seconds
+NFR1.3 The system shall handle up to 10,000 patient records
+
+4.2 Security
+NFR2.1 All data transmission shall be encrypted (HTTPS)
+NFR2.2 User passwords shall be hashed and salted
+NFR2.3 Role-based access control shall be strictly enforced
+NFR2.4 Audit logs shall be maintained for all critical operations
+
+4.3 Reliability
+NFR3.1 The system shall be available 99.9% of the time
+NFR3.2 Automated backups shall be performed daily
+NFR3.3 System recovery time shall not exceed 1 hour
+
+4.4 Usability
+NFR4.1 The interface shall be intuitive and user-friendly
+NFR4.2 The system shall provide context-sensitive help
+NFR4.3 The system shall be accessible on multiple devices
+
+5. SYSTEM INTERFACES
+5.1 User Interfaces
+- Web-based responsive interface
+- Mobile-friendly design
+- Accessible interface following WCAG 2.1 guidelines
+
+5.2 Hardware Interfaces
+- Compatible with standard PC/Mac workstations
+- Support for barcode/QR code scanners
+- Support for medical devices (future enhancement)
+
+5.3 Communications Interfaces
+- Email notifications
+- SMS alerts (future enhancement)
+- WebSocket for real-time updates
+
+6. SYSTEM CONSTRAINTS
+- Must comply with healthcare data protection regulations
+- Must support integration with existing hospital systems
+- Must maintain HIPAA compliance for patient data
+
+7. APPENDICES
+7.1 Definitions and Acronyms
+- HMS: Hospital Management System
+- EHR: Electronic Health Record
+- HIPAA: Health Insurance Portability and Accountability Act
+- WCAG: Web Content Accessibility Guidelines
+
+7.2 References
+- Project Plan Document
+- Problem Statement Document
+- User Interviews and Requirements Gathering Sessions

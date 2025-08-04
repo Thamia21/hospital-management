@@ -1,0 +1,503 @@
+SYSTEM REQUIREMENTS SPECIFICATION (SRS)
+HOSPITAL MANAGEMENT SYSTEM - PART 2
+
+Document Version: 1.0
+Date: July 31, 2025
+Prepared by: Development Team
+Project: Hospital Management System
+
+================================================================================
+CONTINUATION FROM PART 1
+================================================================================
+
+2.5 OPERATING ENVIRONMENT
+-------------------------
+
+**Hardware Requirements:**
+
+**Server Environment:**
+- **Processor**: Multi-core CPU (minimum 4 cores, recommended 8+ cores)
+- **Memory**: Minimum 8GB RAM (recommended 16GB+)
+- **Storage**: Minimum 500GB SSD (recommended 1TB+ with backup)
+- **Network**: High-speed internet connection (minimum 100Mbps)
+- **Backup**: Automated backup system with offsite storage
+
+**Client Environment:**
+- **Device**: Desktop computers, laptops, tablets
+- **Processor**: Modern CPU supporting current web browsers
+- **Memory**: Minimum 4GB RAM (recommended 8GB+)
+- **Display**: Minimum 1024x768 resolution (recommended 1920x1080+)
+- **Network**: Stable internet connection (minimum 10Mbps)
+
+**Software Environment:**
+
+**Server Software:**
+- **Operating System**: Linux (Ubuntu 20.04+) or Windows Server 2019+
+- **Runtime**: Node.js v18.0+
+- **Database**: MongoDB v6.0+
+- **Web Server**: Express.js v4.18+
+- **Security**: SSL/TLS certificates for HTTPS
+
+**Client Software:**
+- **Web Browsers**: 
+  - Google Chrome v100+ (recommended)
+  - Mozilla Firefox v100+
+  - Microsoft Edge v100+
+  - Safari v15+ (macOS)
+- **JavaScript**: Enabled and supported
+- **Cookies**: Enabled for session management
+- **Local Storage**: Supported for user preferences
+
+**Network Environment:**
+- **Internet Connectivity**: Required for all operations
+- **Bandwidth**: Minimum 10Mbps per concurrent user
+- **Latency**: Maximum 200ms for optimal performance
+- **Security**: Firewall protection and VPN support
+- **Backup Connectivity**: Redundant internet connections recommended
+
+2.6 DESIGN AND IMPLEMENTATION CONSTRAINTS
+-----------------------------------------
+
+**Technical Constraints:**
+
+**TC-001: Technology Stack**
+- Must use React.js for frontend development
+- Must use Node.js with Express.js for backend
+- Must use MongoDB for database management
+- Must implement JWT for authentication
+
+**TC-002: Browser Compatibility**
+- Must support modern web browsers (Chrome, Firefox, Edge, Safari)
+- Must be responsive for desktop and tablet devices
+- Must maintain compatibility with browsers released within last 2 years
+
+**TC-003: Performance Constraints**
+- Page load time must not exceed 3 seconds
+- Database queries must complete within 2 seconds
+- System must support minimum 100 concurrent users
+- API response time must not exceed 1 second
+
+**Regulatory Constraints:**
+
+**RC-001: Data Protection**
+- Must comply with South African POPIA (Protection of Personal Information Act)
+- Must implement data encryption for sensitive information
+- Must provide data access and deletion capabilities for patients
+- Must maintain audit trails for all data access and modifications
+
+**RC-002: Healthcare Compliance**
+- Must comply with South African Health Act requirements
+- Must ensure patient confidentiality and privacy
+- Must implement role-based access controls
+- Must maintain data integrity and availability
+
+**RC-003: Accessibility**
+- Must comply with WCAG 2.1 AA accessibility standards
+- Must support screen readers and assistive technologies
+- Must provide keyboard navigation support
+- Must ensure color contrast compliance
+
+**Business Constraints:**
+
+**BC-001: Multi-Language Support**
+- Must support all 11 South African official languages
+- Must provide culturally appropriate content
+- Must maintain translation accuracy and consistency
+
+**BC-002: Budget and Timeline**
+- Development must be completed within allocated budget
+- Must prioritize features based on business value
+- Must deliver minimum viable product within timeline
+
+**BC-003: Integration Requirements**
+- Must be designed for future integration with medical devices
+- Must support data export for regulatory reporting
+- Must maintain API compatibility for third-party integrations
+
+2.7 USER DOCUMENTATION
+----------------------
+
+**UD-001: User Manuals**
+The system will include comprehensive user documentation:
+
+**Administrator Manual:**
+- System installation and configuration guide
+- User management and role assignment procedures
+- Backup and recovery procedures
+- Security configuration and monitoring
+- Troubleshooting and maintenance guide
+
+**Healthcare Provider Manual:**
+- Patient management procedures
+- Appointment scheduling and management
+- Medical record documentation guidelines
+- Prescription management procedures
+- Leave request and approval processes
+
+**Patient User Guide:**
+- Account registration and profile management
+- Appointment booking and management
+- Medical history access and review
+- Billing and payment procedures
+- Communication and notification settings
+
+**Quick Reference Guides:**
+- Common task workflows
+- Keyboard shortcuts and navigation
+- Emergency procedures and contacts
+- System status and maintenance notifications
+
+**UD-002: Online Help System**
+- Context-sensitive help within the application
+- Searchable knowledge base
+- Video tutorials for key functions
+- FAQ section for common questions
+- Contact information for technical support
+
+**UD-003: Training Materials**
+- Role-based training modules
+- Interactive tutorials and walkthroughs
+- Assessment tools for competency verification
+- Continuing education resources
+- Best practices and guidelines
+
+2.8 ASSUMPTIONS AND DEPENDENCIES
+--------------------------------
+
+**Assumptions:**
+
+**A-001: User Assumptions**
+- Users have basic computer literacy and internet access
+- Healthcare staff are familiar with digital systems
+- Patients are willing to adopt digital healthcare management
+- Users will complete required training before system use
+
+**A-002: Technical Assumptions**
+- Reliable internet connectivity is available at all times
+- Modern web browsers are available and updated
+- Email services are accessible for notifications
+- Adequate hardware resources are available for deployment
+
+**A-003: Business Assumptions**
+- Hospital management supports digital transformation
+- Regulatory requirements remain stable during development
+- Budget and resources are available for implementation
+- Staff are available for training and system adoption
+
+**Dependencies:**
+
+**D-001: External Dependencies**
+- Third-party email service providers for notifications
+- SSL certificate providers for security
+- Cloud hosting providers for deployment
+- Internet service providers for connectivity
+
+**D-002: Internal Dependencies**
+- Hospital IT infrastructure and support
+- Staff training and change management
+- Data migration from existing systems
+- Management approval and support
+
+**D-003: Technical Dependencies**
+- MongoDB database availability and performance
+- Node.js runtime environment stability
+- React.js framework updates and compatibility
+- Security updates and patches
+
+**D-004: Regulatory Dependencies**
+- Compliance with current and future healthcare regulations
+- Data protection law compliance requirements
+- Accessibility standard compliance
+- Security standard compliance
+
+================================================================================
+3. EXTERNAL INTERFACE REQUIREMENTS
+================================================================================
+
+3.1 USER INTERFACES
+-------------------
+
+**UI-001: General Interface Requirements**
+
+**Design Principles:**
+- Clean, modern, and intuitive design following Material-UI guidelines
+- Responsive design supporting desktop (1920x1080+) and tablet (768x1024+) devices
+- Consistent navigation and layout across all modules
+- Accessibility compliance with WCAG 2.1 AA standards
+- Multi-language support with right-to-left text support where applicable
+
+**Color Scheme and Branding:**
+- Primary colors: Medical blue (#1976d2) and healthcare green (#4caf50)
+- Secondary colors: Warning amber (#ff9800) and error red (#f44336)
+- Background: Clean white (#ffffff) with light gray accents (#f5f5f5)
+- Text: Dark gray (#333333) for primary text, medium gray (#666666) for secondary
+
+**Typography:**
+- Primary font: Roboto (web-safe, supports multiple languages)
+- Font sizes: 12px (small), 14px (body), 16px (subheading), 20px+ (headings)
+- Line height: 1.5 for optimal readability
+- Font weights: Regular (400), Medium (500), Bold (700)
+
+**UI-002: Login and Authentication Interface**
+
+**Login Page:**
+- Hospital logo and branding prominently displayed
+- Language selection dropdown (11 South African languages)
+- Email/username and password input fields with validation
+- "Remember me" checkbox for convenience
+- "Forgot password" link for password recovery
+- Demo account information for testing
+- Loading indicators during authentication
+
+**Registration Page:**
+- Multi-step registration form with progress indicator
+- Role selection (Patient, Doctor, Nurse, Administrator)
+- Personal information collection with validation
+- Professional credentials for healthcare staff
+- Terms and conditions acceptance
+- Email verification requirement notification
+
+**UI-003: Dashboard Interfaces**
+
+**Patient Dashboard:**
+- Welcome message with patient name and last visit
+- Quick action buttons: Book Appointment, View Records, Pay Bills
+- Upcoming appointments summary with details
+- Recent medical history and prescriptions
+- Outstanding bills and payment status
+- Health summary cards (vitals, conditions, allergies)
+- Notification center for important updates
+
+**Doctor Dashboard:**
+- Daily schedule with appointment list and patient details
+- Patient search and quick access to medical records
+- Prescription management tools
+- Leave request status and calendar
+- Performance metrics and patient feedback
+- Quick actions: Add Prescription, Update Records, Request Leave
+
+**Nurse Dashboard:**
+- Assigned patients and care tasks
+- Medication administration tracking
+- Patient vital signs entry
+- Appointment assistance tools
+- Leave request management
+- Communication center for team coordination
+
+**Administrator Dashboard:**
+- System overview with key performance indicators
+- User management tools and role assignments
+- Financial summary and billing analytics
+- Staff management and leave approvals
+- System health monitoring and alerts
+- Report generation and data export tools
+
+**UI-004: Core Module Interfaces**
+
+**Patient Management Interface:**
+- Patient search with filters (name, ID, phone, email)
+- Patient profile with tabs: Personal Info, Medical History, Appointments, Billing
+- Medical record entry forms with structured data fields
+- Document upload and management (images, PDFs, reports)
+- Emergency contact information and medical alerts
+- Patient communication history and notes
+
+**Appointment Management Interface:**
+- Calendar view with monthly, weekly, and daily options
+- Time slot availability with doctor/nurse scheduling
+- Appointment booking form with patient and provider selection
+- Appointment details with reason, notes, and status
+- Conflict detection and alternative time suggestions
+- Appointment modification and cancellation workflows
+
+**Medical Records Interface:**
+- Structured medical record entry with templates
+- Prescription management with drug database integration
+- Medical history timeline with chronological view
+- Diagnostic test results and imaging integration
+- Treatment plans and care instructions
+- Medical document library and sharing
+
+**Billing Interface:**
+- Invoice generation with itemized services and costs
+- Payment processing with multiple payment methods
+- Outstanding balance tracking and payment reminders
+- Payment history and receipt generation
+- Insurance information and claim tracking
+- Financial reporting and analytics
+
+**UI-005: Responsive Design Requirements**
+
+**Desktop (1920x1080 and above):**
+- Full sidebar navigation with expanded menu items
+- Multi-column layouts for efficient space utilization
+- Detailed data tables with sorting and filtering
+- Modal dialogs for forms and detailed information
+- Hover effects and advanced interactions
+
+**Tablet (768x1024 to 1366x768):**
+- Collapsible sidebar navigation
+- Responsive grid layouts adapting to screen width
+- Touch-friendly buttons and form controls
+- Simplified tables with horizontal scrolling
+- Optimized modal sizes for tablet interaction
+
+3.2 HARDWARE INTERFACES
+-----------------------
+
+**HI-001: Server Hardware Interface**
+
+**Database Server Interface:**
+- MongoDB database server connection via TCP/IP
+- Minimum connection pool of 10 concurrent connections
+- Support for replica sets and sharding for scalability
+- Automated backup interface with scheduled operations
+- Performance monitoring interface for database optimization
+
+**Application Server Interface:**
+- Node.js application server with cluster support
+- Load balancer interface for high availability
+- File system interface for document and image storage
+- Memory management interface for optimal performance
+- Process monitoring interface for health checks
+
+**HI-002: Client Hardware Interface**
+
+**Input Device Support:**
+- Standard keyboard input with full Unicode support
+- Mouse interaction with hover states and click events
+- Touch screen support for tablet devices
+- Accessibility support for alternative input devices
+- Keyboard shortcuts for power users
+
+**Display Interface:**
+- Multi-monitor support for healthcare workstations
+- High-resolution display support (4K and above)
+- Color calibration for medical imaging (future enhancement)
+- Print interface for reports and documents
+- Screen reader compatibility for accessibility
+
+**HI-003: Network Hardware Interface**
+
+**Network Infrastructure:**
+- Ethernet connection support (100Mbps minimum)
+- Wi-Fi network support with WPA2/WPA3 security
+- VPN connection support for remote access
+- Firewall interface for security configuration
+- Network monitoring interface for performance tracking
+
+**Security Hardware:**
+- Hardware security module (HSM) support for encryption
+- Biometric device interface (future enhancement)
+- Smart card reader support (future enhancement)
+- Security camera integration (future enhancement)
+- Access control system interface (future enhancement)
+
+3.3 SOFTWARE INTERFACES
+-----------------------
+
+**SI-001: Database Interface**
+
+**MongoDB Database:**
+- **Interface Type**: TCP/IP connection using MongoDB driver
+- **Data Format**: BSON (Binary JSON) for document storage
+- **Operations**: CRUD operations with aggregation pipeline support
+- **Connection**: Connection string with authentication credentials
+- **Performance**: Connection pooling and query optimization
+- **Backup**: Automated backup and restore procedures
+
+**Database Collections:**
+- Users: Authentication and profile information
+- Patients: Medical records and personal information
+- Appointments: Scheduling and calendar data
+- Prescriptions: Medication and treatment information
+- Bills: Financial and payment information
+- Notifications: System and user notifications
+- Logs: Audit trails and system monitoring
+
+**SI-002: Email Service Interface**
+
+**SMTP Email Service:**
+- **Service Provider**: Gmail SMTP or equivalent enterprise service
+- **Protocol**: SMTP over TLS/SSL (port 587 or 465)
+- **Authentication**: Username/password or OAuth2
+- **Features**: HTML email templates, attachment support
+- **Rate Limiting**: Compliance with provider sending limits
+- **Monitoring**: Delivery status tracking and bounce handling
+
+**Email Templates:**
+- Welcome and registration confirmation
+- Appointment reminders and confirmations
+- Prescription notifications
+- Billing and payment reminders
+- Password reset and security alerts
+- System maintenance notifications
+
+**SI-003: Authentication Service Interface**
+
+**JSON Web Token (JWT):**
+- **Standard**: RFC 7519 JSON Web Token specification
+- **Algorithm**: HS256 (HMAC with SHA-256) for signing
+- **Payload**: User ID, role, email, and expiration time
+- **Storage**: HTTP-only cookies for web security
+- **Refresh**: Token refresh mechanism for extended sessions
+- **Validation**: Middleware for route protection and authorization
+
+**Password Security:**
+- **Hashing**: bcrypt with salt rounds for password storage
+- **Validation**: Password strength requirements and validation
+- **Recovery**: Secure password reset with time-limited tokens
+- **Session**: Session management with automatic logout
+- **Audit**: Login attempt tracking and security monitoring
+
+3.4 COMMUNICATIONS INTERFACES
+-----------------------------
+
+**CI-001: Network Communication Protocols**
+
+**HTTP/HTTPS Protocol:**
+- **Primary Protocol**: HTTPS (HTTP over TLS/SSL) for all communications
+- **Port**: Standard port 443 for HTTPS, port 80 redirect to HTTPS
+- **TLS Version**: TLS 1.2 minimum, TLS 1.3 preferred
+- **Certificates**: Valid SSL certificates from trusted Certificate Authority
+- **Security Headers**: HSTS, CSP, X-Frame-Options for enhanced security
+
+**CI-002: API Communication Standards**
+
+**RESTful API Design:**
+- **Architecture**: Representational State Transfer (REST) principles
+- **HTTP Methods**: GET (read), POST (create), PUT (update), DELETE (remove)
+- **Status Codes**: Standard HTTP status codes (200, 201, 400, 401, 404, 500)
+- **Content Type**: JSON for request and response bodies
+- **Versioning**: API versioning through URL path (/api/v1/)
+
+**API Endpoints Structure:**
+- Authentication: /api/auth/login, /api/auth/register, /api/auth/logout
+- Users: /api/users (CRUD operations with role-based filtering)
+- Patients: /api/patients (patient management and medical records)
+- Appointments: /api/appointments (scheduling and calendar operations)
+- Prescriptions: /api/prescriptions (medication management)
+- Bills: /api/bills (billing and payment operations)
+- Notifications: /api/notifications (system and user notifications)
+
+**CI-003: Data Exchange Formats**
+
+**JSON Data Format:**
+- **Primary Format**: JavaScript Object Notation (JSON) for all API communications
+- **Character Encoding**: UTF-8 for international character support
+- **Date Format**: ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ)
+- **Validation**: JSON schema validation for request/response structure
+- **Compression**: GZIP compression for large payloads
+
+**Error Response Format:**
+```json
+{
+  "error": "Error message for user display",
+  "code": "ERROR_CODE_IDENTIFIER",
+  "details": "Technical details for debugging",
+  "timestamp": "2025-07-31T18:00:00.000Z",
+  "requestId": "unique-request-identifier"
+}
+```
+
+[Document continues in Part 3...]

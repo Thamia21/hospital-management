@@ -1,0 +1,366 @@
+SYSTEM REQUIREMENTS SPECIFICATION (SRS)
+HOSPITAL MANAGEMENT SYSTEM - PART 1
+
+Document Version: 1.0
+Date: July 31, 2025
+Prepared by: Development Team
+Project: Hospital Management System
+
+================================================================================
+TABLE OF CONTENTS
+================================================================================
+
+1. OVERVIEW
+   1.1 Purpose
+   1.2 Document Conventions
+   1.3 Intended Audience and Reading Suggestions
+   1.4 Product Scope
+   1.5 References
+   1.6 Definitions, Acronyms and Abbreviations
+
+2. OVERALL DESCRIPTION
+   2.1 Product Perspective
+   2.2 Change requests for old VOR
+   2.3 Product Functions
+   2.4 User Classes and Characteristics
+   2.5 Operating Environment
+   2.6 Design and Implementation Constraints
+   2.7 User Documentation
+   2.8 Assumptions and Dependencies
+
+================================================================================
+1. OVERVIEW
+================================================================================
+
+1.1 PURPOSE
+-----------
+This Software Requirements Specification (SRS) document provides a comprehensive 
+description of the Hospital Management System (HMS). The system is designed to 
+streamline hospital operations, improve patient care, and enhance administrative 
+efficiency through digital automation of core hospital processes.
+
+The HMS will serve as a centralized platform for:
+- Patient registration and management
+- Appointment scheduling and management
+- Medical records and prescription management
+- Staff management and leave tracking
+- Billing and payment processing
+- Real-time communication and notifications
+- Multi-language support for South African healthcare facilities
+
+This document is intended for stakeholders, developers, testers, and end-users 
+to understand the system's functionality, constraints, and requirements.
+
+1.2 DOCUMENT CONVENTIONS
+------------------------
+This SRS follows IEEE Std 830-1998 guidelines for software requirements 
+specifications. The following conventions are used throughout this document:
+
+- Requirements are numbered hierarchically (e.g., 2.3.1, 2.3.2)
+- Priority levels: High, Medium, Low
+- Functional requirements are prefixed with "FR-"
+- Non-functional requirements are prefixed with "NFR-"
+- Use cases are prefixed with "UC-"
+- Bold text indicates key terms and concepts
+- Italics indicate system responses or user interface elements
+
+1.3 INTENDED AUDIENCE AND READING SUGGESTIONS
+---------------------------------------------
+This document is intended for:
+
+**Primary Audience:**
+- Software Developers: Complete document for implementation guidance
+- Project Managers: Sections 1, 2, and 5 for project planning and scope
+- Quality Assurance Team: Sections 3, 4, and 5 for test planning
+- System Administrators: Sections 2.5, 3, and 5.3 for deployment planning
+
+**Secondary Audience:**
+- Hospital Administrators: Sections 1, 2, and 4 for business understanding
+- End Users (Medical Staff): Sections 2.4, 3.1, and 4 for system capabilities
+- Maintenance Team: Sections 2.8, 3, and 5 for ongoing support
+
+**Reading Suggestions:**
+- First-time readers should start with Section 1 (Overview) and Section 2 (Overall Description)
+- Technical implementers should focus on Sections 3, 4, and 5
+- Business stakeholders should prioritize Sections 1, 2, and 4
+
+1.4 PRODUCT SCOPE
+-----------------
+The Hospital Management System is a comprehensive web-based application designed 
+to digitize and streamline hospital operations in South African healthcare facilities.
+
+**Primary Objectives:**
+- Reduce administrative overhead by 40%
+- Improve patient care coordination
+- Ensure regulatory compliance with South African healthcare standards
+- Provide real-time access to patient information
+- Support multiple official South African languages
+- Enable efficient resource allocation and staff management
+
+**Key Benefits:**
+- Enhanced patient safety through digital medical records
+- Improved operational efficiency through automated workflows
+- Better financial management with integrated billing
+- Comprehensive reporting and analytics
+- Reduced paperwork and manual errors
+- 24/7 system availability for critical healthcare operations
+
+**Scope Boundaries:**
+IN SCOPE:
+- Patient registration and management
+- Appointment scheduling and management
+- Medical records and prescription management
+- Staff management and leave tracking
+- Billing and payment processing
+- Multi-language support (11 South African official languages)
+- Real-time notifications and communication
+- Reporting and analytics dashboard
+- User authentication and authorization
+- Data backup and recovery
+
+OUT OF SCOPE:
+- Medical device integration (Phase 2)
+- Laboratory information system integration (Phase 2)
+- Pharmacy inventory management (Phase 2)
+- Insurance claim processing (Phase 2)
+- Telemedicine capabilities (Future enhancement)
+- Mobile application (Phase 2)
+
+1.5 REFERENCES
+--------------
+- IEEE Std 830-1998: IEEE Recommended Practice for Software Requirements Specifications
+- South African Health Act 61 of 2003
+- Protection of Personal Information Act (POPIA) 4 of 2013
+- ISO 27001:2013 Information Security Management
+- HL7 FHIR R4 Healthcare Data Standards
+- MongoDB Documentation v6.0
+- React.js Documentation v18
+- Node.js Documentation v18
+- Material-UI Design System Documentation
+
+1.6 DEFINITIONS, ACRONYMS AND ABBREVIATIONS
+-------------------------------------------
+**Definitions:**
+- **Patient**: An individual receiving medical care at the hospital
+- **Staff**: Hospital employees including doctors, nurses, and administrative personnel
+- **Appointment**: A scheduled meeting between a patient and healthcare provider
+- **Medical Record**: Digital documentation of patient's medical history and treatment
+- **Leave Request**: Formal request by staff for time off from work
+- **Dashboard**: Main interface showing key metrics and quick actions
+
+**Acronyms:**
+- HMS: Hospital Management System
+- SRS: Software Requirements Specification
+- UI: User Interface
+- API: Application Programming Interface
+- CRUD: Create, Read, Update, Delete
+- JWT: JSON Web Token
+- HTTPS: Hypertext Transfer Protocol Secure
+- RBAC: Role-Based Access Control
+- POPIA: Protection of Personal Information Act
+- EMR: Electronic Medical Record
+
+**Abbreviations:**
+- Admin: Administrator
+- Auth: Authentication
+- DB: Database
+- ID: Identifier
+- PWD: Password
+- SMS: Short Message Service
+- URL: Uniform Resource Locator
+- PDF: Portable Document Format
+- CSV: Comma-Separated Values
+
+================================================================================
+2. OVERALL DESCRIPTION
+================================================================================
+
+2.1 PRODUCT PERSPECTIVE
+-----------------------
+The Hospital Management System is a new, self-contained web-based application 
+designed specifically for South African healthcare facilities. The system operates 
+as a comprehensive digital platform that replaces traditional paper-based hospital 
+management processes.
+
+**System Context:**
+The HMS operates within the broader healthcare ecosystem, interfacing with:
+- Hospital staff (doctors, nurses, administrators)
+- Patients and their families
+- Hospital management and decision-makers
+- Regulatory compliance requirements
+- Financial and billing systems
+
+**System Architecture:**
+- **Frontend**: React.js web application with Material-UI components
+- **Backend**: Node.js with Express.js framework
+- **Database**: MongoDB for data persistence
+- **Authentication**: JWT-based secure authentication
+- **Communication**: Email notifications via SMTP
+- **Deployment**: Cloud-based hosting with scalability support
+
+**Key System Interfaces:**
+- Web browser interface for all user interactions
+- Email system for automated notifications
+- Database management for data persistence
+- File system for document storage and retrieval
+
+2.2 CHANGE REQUESTS FOR OLD VOR
+-------------------------------
+This is a new system development, replacing existing manual and paper-based 
+processes. The following legacy system limitations are addressed:
+
+**Previous System Limitations:**
+- Manual paper-based patient records leading to data loss and inefficiency
+- Phone-based appointment scheduling causing scheduling conflicts
+- Manual staff leave tracking resulting in coverage gaps
+- Paper-based billing prone to errors and delays
+- No centralized patient information access
+- Language barriers for non-English speaking patients
+- Limited reporting and analytics capabilities
+
+**Improvements in New System:**
+- Digital patient records with backup and recovery
+- Automated appointment scheduling with conflict detection
+- Electronic leave management with approval workflows
+- Integrated billing with payment tracking
+- Centralized database with role-based access
+- Multi-language support for all 11 South African official languages
+- Comprehensive reporting and analytics dashboard
+- Real-time notifications and communication
+
+2.3 PRODUCT FUNCTIONS
+---------------------
+The Hospital Management System provides the following major functions:
+
+**FR-001: User Management and Authentication**
+- User registration with role-based access (Patient, Doctor, Nurse, Admin)
+- Secure login with email verification
+- Password management and recovery
+- User profile management
+- Session management and security
+
+**FR-002: Patient Management**
+- Patient registration with comprehensive personal information
+- Patient search and retrieval
+- Medical history tracking
+- Emergency contact management
+- Patient dashboard with health summary
+
+**FR-003: Appointment Management**
+- Appointment scheduling with doctor/nurse availability
+- Appointment modification and cancellation
+- Automated conflict detection
+- Appointment reminders via email
+- Calendar integration and time slot management
+
+**FR-004: Medical Records Management**
+- Digital medical record creation and maintenance
+- Prescription management and tracking
+- Medical history documentation
+- Secure access to patient records
+- Medical document upload and storage
+
+**FR-005: Staff Management**
+- Staff profile management
+- Leave request submission and approval
+- Staff scheduling and availability tracking
+- Department and specialization management
+- Staff performance tracking
+
+**FR-006: Billing and Payment Management**
+- Invoice generation and management
+- Payment processing and tracking
+- Outstanding balance monitoring
+- Payment history and receipts
+- Financial reporting
+
+**FR-007: Communication and Notifications**
+- Email notifications for appointments, prescriptions, and billing
+- Real-time system notifications
+- Multi-language communication support
+- Emergency contact notifications
+
+**FR-008: Reporting and Analytics**
+- Patient statistics and demographics
+- Appointment analytics and trends
+- Staff performance reports
+- Financial reports and billing analytics
+- System usage and performance metrics
+
+**FR-009: Multi-Language Support**
+- Interface translation for 11 South African official languages
+- Language preference management
+- Cultural-appropriate content adaptation
+- Accessibility compliance
+
+**FR-010: System Administration**
+- User role and permission management
+- System configuration and settings
+- Data backup and recovery management
+- Security monitoring and audit trails
+- System maintenance and updates
+
+2.4 USER CLASSES AND CHARACTERISTICS
+------------------------------------
+
+**UC-001: Hospital Administrators**
+- **Primary Role**: System oversight and management
+- **Technical Expertise**: Medium to High
+- **Responsibilities**:
+  - User account management and role assignment
+  - System configuration and settings management
+  - Report generation and analysis
+  - Staff management and leave approval
+  - Financial oversight and billing management
+- **Frequency of Use**: Daily
+- **Key Features**: Admin dashboard, user management, reporting, system settings
+
+**UC-002: Medical Doctors**
+- **Primary Role**: Patient care and medical decision-making
+- **Technical Expertise**: Medium
+- **Responsibilities**:
+  - Patient consultation and treatment
+  - Medical record documentation
+  - Prescription management
+  - Appointment scheduling and management
+  - Leave request submission
+- **Frequency of Use**: Daily
+- **Key Features**: Patient records, appointment management, prescription tools, medical documentation
+
+**UC-003: Nurses**
+- **Primary Role**: Patient care support and medical assistance
+- **Technical Expertise**: Medium
+- **Responsibilities**:
+  - Patient care coordination
+  - Medical record updates
+  - Appointment assistance
+  - Medication administration tracking
+  - Leave request submission
+- **Frequency of Use**: Daily
+- **Key Features**: Patient records, appointment management, medication tracking, care coordination
+
+**UC-004: Patients**
+- **Primary Role**: Healthcare service recipients
+- **Technical Expertise**: Low to Medium
+- **Responsibilities**:
+  - Personal information management
+  - Appointment booking and management
+  - Medical history review
+  - Bill payment and financial management
+  - Communication with healthcare providers
+- **Frequency of Use**: As needed (weekly to monthly)
+- **Key Features**: Patient portal, appointment booking, medical history, billing, notifications
+
+**UC-005: Support Staff (Receptionists/Administrative)**
+- **Primary Role**: Administrative support and patient coordination
+- **Technical Expertise**: Medium
+- **Responsibilities**:
+  - Patient registration and check-in
+  - Appointment scheduling assistance
+  - Billing and payment processing
+  - General system support
+  - Information management
+- **Frequency of Use**: Daily
+- **Key Features**: Patient registration, appointment management, billing, basic reporting
+
+[Document continues in Part 2...]

@@ -11,7 +11,6 @@ import {
   Divider,
   CircularProgress,
 } from '@mui/material';
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 import { useAuth } from '../context/AuthContext';
 import Chat from './Chat';
@@ -25,178 +24,83 @@ const ChatList = () => {
 
   const handleChatSelect = async (chatId) => {
     try {
-      console.log('Setting selected chat:', chatId);
-      const chatDoc = await getDoc(doc(db, 'chatRooms', chatId));
-      if (chatDoc.exists()) {
-        const chatData = chatDoc.data();
-        console.log('Chat room data:', chatData);
-        
-        if (!chatData.doctorId || !chatData.patientId) {
-          console.error('Chat room missing required IDs:', chatData);
-          return;
+      setLoading(true);
+      const res = await fetch(`/api/chats?userId=${user.uid}`);
+      const data = await res.json();
+      const chat = data.chats.find(c => c._id === chatId);
+      if (chat) {
+        // Find the other participant
+        const otherParticipantId = chat.participants.find(id => id !== user.uid);
+        let otherParticipant = null;
+        if (otherParticipantId) {
+          const userRes = await fetch(`/api/users/${otherParticipantId}`);
+          if (userRes.ok) {
+            otherParticipant = await userRes.json();
+          }
         }
-
-        // Get the other participant's ID
-        const otherParticipantId = Object.keys(chatData.participants)
-          .find(id => id !== user.uid);
-        
-        // Get the other participant's details
-        const userDocRef = doc(db, 'users', otherParticipantId);
-        const userDocSnap = await getDoc(userDocRef);
-        const otherParticipant = userDocSnap.data();
-
         const selectedChatData = {
-          id: chatId,
-          doctorId: chatData.doctorId,
-          patientId: chatData.patientId,
+          id: chat._id,
+          doctorId: chat.doctorId,
+          patientId: chat.patientId,
           otherParticipant: {
             id: otherParticipantId,
-            name: otherParticipant?.displayName || 'Anonymous',
+            name: otherParticipant?.displayName || otherParticipant?.firstName || 'Anonymous',
             role: otherParticipant?.role
           },
-          lastMessage: chatData.lastMessage,
-          lastMessageTime: chatData.lastMessageTime
+          lastMessage: chat.lastMessage,
+          lastMessageTime: chat.lastMessageTime
         };
-
-        console.log('Setting selected chat data:', selectedChatData);
         setSelectedChat(selectedChatData);
       } else {
         console.error('Chat room not found:', chatId);
       }
     } catch (error) {
       console.error('Error getting chat data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    console.log('Loading chats for user:', user);
-    if (!user) return;
-
-    // Query chat rooms where the current user is a participant
-    const q = query(
-      collection(db, 'chatRooms'),
-      where(`participants.${user.uid}`, '==', true)
-    );
-
-    console.log('Querying chat rooms with:', {
-      collection: 'chatRooms',
-      participantField: `participants.${user.uid}`,
-      value: true
-    });
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      console.log('Chat rooms snapshot received:', {
-        empty: snapshot.empty,
-        size: snapshot.size,
-        docs: snapshot.docs.map(doc => doc.id)
-      });
-
-      const chatsData = await Promise.all(snapshot.docs.map(async (doc) => {
-        const data = doc.data();
-        console.log('Chat room found:', {
-          id: doc.id,
-          participants: data.participants,
-          doctorId: data.doctorId,
-          patientId: data.patientId
-        });
-        return {
-          id: doc.id,
-          ...data,
-          lastMessage: data.lastMessage || null,
-          lastMessageTime: data.lastMessageTime || null
-        };
-      }));
-
-      const processChatRoom = async (chatRoom) => {
-        console.log('Processing chat room:', {
-          id: chatRoom.id,
-          participants: chatRoom.participants,
-          currentUserId: user.uid
-        });
-
-        // Get the other participant's ID
-        const otherParticipantId = Object.keys(chatRoom.participants || {})
-          .find(id => id !== user.uid);
-
-        console.log('Found other participant:', { otherParticipantId });
-        
-        if (!otherParticipantId) {
-          console.error('No other participant found in chat room:', chatRoom.id);
-          return null;
-        }
-
-        // Get the other participant's details
-        const userDocRef = doc(db, 'users', otherParticipantId);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        if (!userDocSnap.exists()) {
-          console.error('Other participant document not found:', otherParticipantId);
-          return null;
-        }
-
-        const otherParticipant = userDocSnap.data();
-        
-        // Get the user's full name and role
-        let displayName;
-        if (otherParticipant?.firstName && otherParticipant?.lastName) {
-          displayName = `${otherParticipant.firstName} ${otherParticipant.lastName}`;
-        } else if (otherParticipant?.firstName) {
-          displayName = otherParticipant.firstName;
-        } else if (otherParticipant?.displayName) {
-          displayName = otherParticipant.displayName;
-        } else {
-          displayName = 'Anonymous';
-        }
-
-        const role = otherParticipant?.role?.toUpperCase();
-        if (role) {
-          displayName = `${displayName} (${role})`;
-        }
-        
-        return {
-          id: chatRoom.id,
-          doctorId: chatRoom.doctorId,
-          patientId: chatRoom.patientId,
-          otherParticipant: {
-            id: otherParticipantId,
-            name: displayName,
-            role: role
-          },
-          lastMessage: chatRoom.lastMessage || null,
-          lastMessageTime: chatRoom.lastMessageTime || null
-        };
-      };
-
-      const promises = chatsData.map(processChatRoom);
-      const processedChatsData = await Promise.all(promises);
-      
-      // Filter out null values (failed to process)
-      const validChats = processedChatsData.filter(chat => chat !== null);
-      console.log('Final processed chats:', {
-        total: processedChatsData.length,
-        valid: validChats.length,
-        chats: validChats.map(chat => ({
-          id: chat.id,
-          otherParticipant: chat.otherParticipant
-        }))
-      });
-      
-      setChats(validChats);
-
-      // If we have a selectedChat, update it with the latest data
-      if (selectedChat) {
-        const updatedChat = processedChatsData.find(chat => 
-          chat.id === (typeof selectedChat === 'string' ? selectedChat : selectedChat.id)
-        );
-        if (updatedChat) {
-          console.log('Updating selected chat with:', updatedChat);
-          setSelectedChat(updatedChat);
-        }
-      }
+    console.log('[ChatList] user:', user);
+    console.log('[ChatList] user?.uid:', user?.uid);
+    if (!user || !user.uid) {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
+      return;
+    }
+    setLoading(true);
+    fetch(`/api/chats?userId=${user.uid}`)
+      .then(async res => {
+        console.log('[ChatList] /api/chats response status:', res.status);
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`API error: ${res.status} ${res.statusText}. Response: ${text}`);
+        }
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await res.text();
+          throw new Error(`Expected JSON, got: ${text}`);
+        }
+        return res.json();
+      })
+      .then(data => {
+        console.log('[ChatList] /api/chats data:', data);
+        if (!data.chats || !Array.isArray(data.chats)) {
+          throw new Error('Malformed response: missing chats array');
+        }
+        setChats(data.chats.map(chat => ({
+          id: chat._id,
+          doctorId: chat.doctorId,
+          patientId: chat.patientId,
+          otherParticipantId: chat.participants.find(id => id !== user.uid),
+          lastMessage: chat.lastMessage,
+          lastMessageTime: chat.lastMessageTime
+        })));
+      })
+      .catch(err => {
+        console.error('[ChatList] Error loading chats:', err);
+      })
+      .finally(() => setLoading(false));
   }, [user]);
 
   if (loading) {

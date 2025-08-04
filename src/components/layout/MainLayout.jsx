@@ -143,7 +143,7 @@ export default function MainLayout() {
         {
           text: 'Messages',
           icon: <ChatIcon />,
-          path: '/messages'
+          path: '/doctor/messages'
         },
         {
           text: 'Appointments',
@@ -210,7 +210,7 @@ export default function MainLayout() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Hospital Management System
+            {user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)} Portal
           </Typography>
           <div>
             <IconButton
@@ -221,7 +221,7 @@ export default function MainLayout() {
               onClick={handleMenu}
               color="inherit"
             >
-              <AccountCircleIcon />
+              <Avatar alt={user?.name} src="/static/images/avatar/1.jpg" />
             </IconButton>
             <Menu
               id="menu-appbar"
@@ -239,6 +239,9 @@ export default function MainLayout() {
               onClose={handleClose}
             >
               <MenuItem onClick={() => { handleClose(); navigate('/profile'); }}>
+                <ListItemIcon>
+                  <AccountCircleIcon fontSize="small" />
+                </ListItemIcon>
                 Profile
               </MenuItem>
               <MenuItem onClick={handleLogout}>
@@ -266,27 +269,19 @@ export default function MainLayout() {
       >
         <DrawerHeader>
           <IconButton onClick={handleDrawerClose}>
-            <ChevronLeftIcon />
+            {theme.direction === 'ltr' ? <ChevronLeftIcon /> : <ChevronLeftIcon />}
           </IconButton>
         </DrawerHeader>
         <Divider />
         <List>
-          {menuItems.map((item, index) => (
+          {menuItems.map((item) => (
             <ListItem 
               button 
-              key={item.text}
-              onClick={() => {
-                // Redirect old dashboard route for admin to new one
-                if (user?.role?.toUpperCase() === 'ADMIN' && item.path === '/dashboard') {
-                  navigate('/admin/dashboard');
-                } else {
-                  navigate(item.path);
-                }
-              }}
+              key={item.text} 
+              onClick={() => navigate(item.path)}
+              selected={window.location.pathname === item.path}
             >
-              <ListItemIcon>
-                {item.icon}
-              </ListItemIcon>
+              <ListItemIcon>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} />
             </ListItem>
           ))}

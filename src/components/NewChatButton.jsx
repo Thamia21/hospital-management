@@ -16,7 +16,6 @@ import {
   InputAdornment,
 } from '@mui/material';
 import { Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
-import { collection, query, where, getDocs, addDoc, setDoc, doc, updateDoc, getDoc } from 'firebase/firestore';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -33,67 +32,21 @@ const NewChatButton = ({ onChatCreated, onChatSelected }) => {
   // Function to search for users
   const searchUsers = async () => {
     if (!searchTerm) return;
-
     try {
       setLoading(true);
-      console.log('Current user:', user);
-      
-      if (!user) {
-        console.error('No user logged in');
-        return;
-      }
-
+      if (!user) return;
       const userRole = user.role?.toUpperCase();
-      console.log('User role:', userRole);
-
-      if (!userRole) {
-        console.error('User has no role');
-        return;
-      }
-
+      if (!userRole) return;
       let targetRole = userRole === 'PATIENT' ? 'DOCTOR' : 'PATIENT';
-      console.log('Target role:', targetRole);
-
-      const usersRef = collection(db, 'users');
-      
-      // Get all users with the target role (case-insensitive)
-      const q = query(
-        usersRef,
-        where('role', 'in', [targetRole, targetRole.toLowerCase(), targetRole.toUpperCase()])
-      );
-
-      console.log('Executing query for role:', targetRole);
-      let querySnapshot = await getDocs(q);
-      console.log('Query results:', querySnapshot.docs.length, 'users found');
-      
-      // If no doctors found, try to create the default doctor account
-      if (querySnapshot.docs.length === 0 && targetRole === 'DOCTOR') {
-        await createDefaultDoctor();
-        // Retry the query
-        const retrySnapshot = await getDocs(q);
-        console.log('Retry query results:', retrySnapshot.docs.length, 'users found');
-        querySnapshot = retrySnapshot;
+      const res = await fetch(`/api/users?role=${targetRole}&search=${encodeURIComponent(searchTerm)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data.users || []);
+      } else {
+        setUsers([]);
       }
-      
-      const matchedUsers = [];
-      querySnapshot.forEach((doc) => {
-        const userData = doc.data();
-        // Only include doctors if current user is patient, and vice versa
-        if (
-          (user?.role?.toUpperCase() === 'PATIENT' && userData?.role?.toUpperCase() === 'DOCTOR') ||
-          (user?.role?.toUpperCase() === 'DOCTOR' && userData?.role?.toUpperCase() === 'PATIENT')
-        ) {
-          matchedUsers.push({ id: doc.id, ...userData });
-        }
-      });
-
-      // Filter out current user
-      const validUsers = matchedUsers.filter(u => u.id !== user.uid);
-
-      console.log('Found users:', validUsers);
-      setUsers(validUsers);
     } catch (error) {
-      console.error('Error searching users:', error);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -101,81 +54,31 @@ const NewChatButton = ({ onChatCreated, onChatSelected }) => {
 
   // Function to create a new chat room
   const createChatRoom = async (selectedUser) => {
-    console.log('Creating chat room with user:', selectedUser);
     try {
-      const chatRoomsRef = collection(db, 'chatRooms');
-
-      // Check if chat room already exists
-      const q = query(
-        chatRoomsRef,
-        where(`participants.${user.uid}`, '==', true),
-        where(`participants.${selectedUser.id}`, '==', true)
-      );
-
-      const querySnapshot = await getDocs(q);
-      let chatRoomId;
       let doctorId, patientId;
-
-      // Determine doctor and patient IDs
       const currentUserRole = user.role?.toUpperCase();
-      const selectedUserRole = selectedUser.role?.toUpperCase();
-      console.log('User roles:', { currentUserRole, selectedUserRole });
-
-      if (currentUserRole === 'DOCTOR' && selectedUserRole === 'PATIENT') {
-        doctorId = user.uid;
-        patientId = selectedUser.id;
-      } else if (currentUserRole === 'PATIENT' && selectedUserRole === 'DOCTOR') {
+      if (currentUserRole === 'PATIENT') {
         doctorId = selectedUser.id;
         patientId = user.uid;
       } else {
-        console.error('Invalid user roles:', { currentUserRole, selectedUserRole });
-        return;
+        doctorId = user.uid;
+        patientId = selectedUser.id;
       }
-
-      console.log('Assigned IDs:', { doctorId, patientId });
-
-      if (!querySnapshot.empty) {
-        // Chat room exists, use the first one
-        chatRoomId = querySnapshot.docs[0].id;
-        console.log('Using existing chat room:', chatRoomId);
-
-        // Update existing chat room with IDs if needed
-        const chatRoomRef = doc(db, 'chatRooms', chatRoomId);
-        await updateDoc(chatRoomRef, {
-          doctorId,
-          patientId,
-          lastUpdated: new Date()
-        });
-      } else {
-        // Create new chat room
-        const participants = {};
-        participants[user.uid] = true;
-        participants[selectedUser.id] = true;
-
-        const chatRoomRef = await addDoc(chatRoomsRef, {
-          participants,
-          doctorId,
-          patientId,
-          createdAt: new Date(),
-          lastMessage: null,
-          lastMessageTime: null
-        });
-
-        chatRoomId = chatRoomRef.id;
-        console.log('Created new chat room:', chatRoomId);
+      if (!doctorId || !patientId) return;
+      const res = await fetch('/api/chats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctorId, patientId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (onChatSelected) onChatSelected(data.chat._id);
+        setOpen(false);
+        setSearchTerm('');
+        setUsers([]);
+        setSearchDialogOpen(false);
       }
-
-      console.log('Chat room created/updated:', { chatRoomId, doctorId, patientId });
-      if (onChatSelected) {
-        onChatSelected(chatRoomId);
-      }
-      setOpen(false);
-      setSearchTerm('');
-      setUsers([]);
-      setSearchDialogOpen(false);
-    } catch (error) {
-      console.error('Error creating chat room:', error);
-    }
+    } catch (error) {}
   };
 
   const handleClickOpen = () => {

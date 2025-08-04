@@ -21,7 +21,9 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     const userInfo = localStorage.getItem('user');
     if (token && userInfo) {
-      setUser(JSON.parse(userInfo));
+      const parsedUser = JSON.parse(userInfo);
+      const normalizedUser = { ...parsedUser, uid: parsedUser.uid || parsedUser._id || parsedUser.id };
+      setUser(normalizedUser);
       setToken(token);
     }
     setLoading(false);
@@ -55,8 +57,13 @@ export const AuthProvider = ({ children }) => {
       if (data.token && data.user) {
         localStorage.setItem('token', data.token);
         setToken(data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
+        // Normalize user object to ensure uid is available
+        const normalizedUser = { 
+          ...data.user, 
+          uid: data.user.uid || data.user._id || data.user.id 
+        };
+        localStorage.setItem('user', JSON.stringify(normalizedUser));
+        setUser(normalizedUser);
       }
       return data;
     } catch (error) {

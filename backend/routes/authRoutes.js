@@ -25,7 +25,16 @@ const transporter = nodemailer.createTransport({
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { 
+      name, email, password, role, phone,
+      // Patient-specific fields
+      idNumber, dateOfBirth, gender, address, emergencyContact, emergencyPhone,
+      // Professional fields
+      licenseNumber, specialization, department, qualifications, experience
+    } = req.body;
+    
+    console.log('Registration request body:', req.body);
+    
     let user = await User.findOne({ email });
     console.log('User found for email:', email, user);
     if (user) return res.status(400).json({ error: 'User already exists' });
@@ -41,19 +50,45 @@ router.post('/register', async (req, res) => {
     
     const hashedPassword = await bcrypt.hash(password, 10);
     const verificationToken = crypto.randomBytes(32).toString('hex');
-    user = new User({ 
+    
+    // Create user object with all fields
+    const userData = { 
       userId: finalUserId,
       name, 
       email, 
       password: hashedPassword, 
-      role, 
+      role: role.toUpperCase(), // Ensure role is uppercase
+      phone,
       isVerified: false, 
-      verificationToken 
-    });
+      verificationToken
+    };
+    
+    // Add patient-specific fields if role is patient
+    if (role.toLowerCase() === 'patient') {
+      if (idNumber) userData.idNumber = idNumber;
+      if (dateOfBirth) userData.dateOfBirth = new Date(dateOfBirth);
+      if (gender) userData.gender = gender;
+      if (address) userData.address = address;
+      if (emergencyContact) userData.emergencyContact = emergencyContact;
+      if (emergencyPhone) userData.emergencyPhone = emergencyPhone;
+    }
+    
+    // Add professional fields if role is doctor or nurse
+    if (['doctor', 'nurse'].includes(role.toLowerCase())) {
+      if (licenseNumber) userData.licenseNumber = licenseNumber;
+      if (specialization) userData.specialization = specialization;
+      if (department) userData.department = department;
+      if (qualifications) userData.qualifications = qualifications;
+      if (experience) userData.experience = experience;
+    }
+    
+    user = new User(userData);
     await user.save();
+    
+    console.log('User created successfully:', user.userId);
 
-    // Send verification email with userId - using direct verification endpoint
-    const verificationUrl = `http://localhost:5000/verify-email?token=${verificationToken}`;
+    // Send verification email with userId - using frontend verification page
+    const verificationUrl = `http://localhost:5173/verify-email?token=${verificationToken}`;
     await transporter.sendMail({
       to: user.email,
       subject: 'Verify your email - Hospital Management System',

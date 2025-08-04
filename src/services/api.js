@@ -57,6 +57,27 @@ export const userService = {
     const res = await axios.get(`${API_URL}/users`, { headers: getAuthHeader() });
     return res.data;
   },
+  async getUserById(userId) {
+    const res = await axios.get(`${API_URL}/users/${userId}`, { headers: getAuthHeader() });
+    return res.data;
+  },
+
+  async getDoctorDashboardStats(doctorId, facilityId) {
+    const userRes = await axios.get(`${API_URL}/users/${doctorId}`, { headers: getAuthHeader() });
+    const doctorData = userRes.data;
+    // Fetch stats filtered by facilityId if needed
+    // ...
+    return {
+      doctorName: doctorData.name,
+      stats: statsData
+    };
+  },
+
+  async getDoctorAppointments(doctorId, facilityId) {
+    // Fetch appointments for doctor, filtered by facility
+    const res = await axios.get(`${API_URL}/appointments?doctorId=${doctorId}&facilityId=${facilityId}`, { headers: getAuthHeader() });
+    return res.data;
+  },
 };
 
 // Appointment service
@@ -65,12 +86,22 @@ export const appointmentService = {
     const res = await axios.get(`${API_URL}/appointments`, { headers: getAuthHeader() });
     return res.data;
   },
+  async getPatientAppointments(patientId) {
+    const res = await axios.get(`${API_URL}/appointments/patient/${patientId}`, { 
+      headers: getAuthHeader() 
+    });
+    return res.data || [];
+  },
   async createAppointment(appointmentData) {
     const res = await axios.post(`${API_URL}/appointments`, appointmentData, { headers: getAuthHeader() });
     return res.data;
   },
   async updateAppointmentStatus(appointmentId, status) {
-    const res = await axios.put(`${API_URL}/appointments/${appointmentId}`, { status }, { headers: getAuthHeader() });
+    const res = await axios.put(
+      `${API_URL}/appointments/${appointmentId}`, 
+      { status }, 
+      { headers: getAuthHeader() }
+    );
     return res.data;
   },
 };
@@ -92,44 +123,28 @@ export const patientService = {
 
   async getAppointments(userId) {
     try {
-      // Get appointments for the user
-      const appointmentsQuery = query(
-        collection(db, 'appointments'),
-        where('patientId', '==', userId)
-      );
-      const appointmentsSnapshot = await getDocs(appointmentsQuery);
-      const appointments = appointmentsSnapshot.docs.map(convertDoc);
+      // Get appointments for the user via API (already populated with doctor details)
+      const response = await axios.get(`${API_URL}/patients/${userId}/appointments`, {
+        headers: getAuthHeader()
+      });
+      const appointments = response.data || [];
 
-      // Fetch doctor details for each appointment
-      const appointmentsWithDoctors = await Promise.all(
-        appointments.map(async (appointment) => {
-          try {
-            if (!appointment.doctorId) {
-              return { ...appointment, doctorName: 'Unknown' };
-            }
-
-            const doctorDoc = await getDoc(doc(db, 'doctors', appointment.doctorId));
-            if (!doctorDoc.exists()) {
-              return { ...appointment, doctorName: 'Unknown' };
-            }
-
-            const doctorData = doctorDoc.data();
-            return {
-              ...appointment,
-              doctorName: `${doctorData.firstName} ${doctorData.lastName}`,
-              doctorSpecialty: doctorData.department || 'General'
-            };
-          } catch (error) {
-            console.error('Error fetching doctor details:', error);
-            return { ...appointment, doctorName: 'Unknown' };
-          }
-        })
-      );
+      // Process appointments to ensure consistent data structure
+      const processedAppointments = appointments.map((appointment) => {
+        return {
+          ...appointment,
+          // Handle populated doctor data
+          doctorName: appointment.doctorId?.name || appointment.doctorName || 'Unknown',
+          doctorSpecialty: appointment.doctorId?.specialization || appointment.doctorId?.department || appointment.doctorSpecialty || 'General',
+          // Ensure date is a proper Date object
+          date: new Date(appointment.date)
+        };
+      });
 
       // Sort appointments by date
-      return appointmentsWithDoctors.sort((a, b) => {
-        const dateA = a.date?.toDate?.() || new Date(a.date);
-        const dateB = b.date?.toDate?.() || new Date(b.date);
+      return processedAppointments.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
         return dateA - dateB;
       });
     } catch (error) {
@@ -140,12 +155,10 @@ export const patientService = {
 
   async getPrescriptions(userId) {
     try {
-      const q = query(
-        collection(db, 'prescriptions'),
-        where('patientId', '==', userId)
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(convertDoc);
+      const response = await axios.get(`${API_URL}/patients/${userId}/prescriptions`, {
+        headers: getAuthHeader()
+      });
+      return response.data || [];
     } catch (error) {
       throw new Error(error.message || 'Failed to get prescriptions');
     }
@@ -153,12 +166,10 @@ export const patientService = {
 
   async getBills(userId) {
     try {
-      const q = query(
-        collection(db, 'bills'),
-        where('patientId', '==', userId)
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(convertDoc);
+      const response = await axios.get(`${API_URL}/patients/${userId}/bills`, {
+        headers: getAuthHeader()
+      });
+      return response.data || [];
     } catch (error) {
       throw new Error(error.message || 'Failed to get bills');
     }
@@ -167,10 +178,7 @@ export const patientService = {
   async bookAppointment(appointmentData) {
     try {
       // Validate required fields
-      const requiredFields = [
-        'patientId', 'doctorId', 'date', 
-        'time', 'reason', 'status'
-      ];
+      const requiredFields = ['patientId', 'date', 'reason'];
       
       for (const field of requiredFields) {
         if (!appointmentData[field]) {
@@ -178,41 +186,76 @@ export const patientService = {
         }
       }
 
-      // Check for existing appointment at same time
-      const appointmentsRef = collection(db, 'appointments');
-      const q = query(
-        appointmentsRef, 
-        where('doctorId', '==', appointmentData.doctorId),
-        where('date', '==', appointmentData.date),
-        where('time', '==', appointmentData.time)
-      );
-      const existingAppointmentsSnapshot = await getDocs(q);
-
-      if (!existingAppointmentsSnapshot.empty) {
-        throw new Error('This time slot is no longer available');
+      // Validate that either doctorId or nurseId is provided
+      if (!appointmentData.doctorId && !appointmentData.nurseId) {
+        throw new Error('Either doctor or nurse must be selected');
       }
 
-      // Ensure we're storing dates as Firestore Timestamps
-      const firestoreData = {
-        ...appointmentData,
-        date: Timestamp.fromDate(appointmentData.date),
-        createdAt: serverTimestamp(),
-        status: appointmentData.status.toUpperCase() // Normalize status case
+      // Extract time from date if it's a full datetime
+      const appointmentDate = new Date(appointmentData.date);
+      const timeString = `${appointmentDate.getHours().toString().padStart(2, '0')}:${appointmentDate.getMinutes().toString().padStart(2, '0')}`;
+
+      // Get current user's facilityId from localStorage or token
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      // Prepare appointment data for API
+      const apiData = {
+        patientId: appointmentData.patientId,
+        doctorId: appointmentData.doctorId || undefined,
+        nurseId: appointmentData.nurseId || undefined,
+        date: appointmentDate.toISOString(),
+        time: timeString,
+        reason: appointmentData.reason,
+        status: 'SCHEDULED', // Use SCHEDULED instead of PENDING
+        type: appointmentData.type || (appointmentData.doctorId ? 'DOCTOR' : 'NURSE')
       };
+      
+      // Add facilityId - use user's facilityId or a default one
+      apiData.facilityId = currentUser.facilityId || '507f1f77bcf86cd799439011'; // Default facility ID
 
-      console.log('Saving appointment to Firestore:', firestoreData);
+      // Remove undefined fields
+      Object.keys(apiData).forEach(key => {
+        if (apiData[key] === undefined) {
+          delete apiData[key];
+        }
+      });
 
-      // Add appointment to Firestore
-      const docRef = await addDoc(appointmentsRef, firestoreData);
+      console.log('Booking appointment via API:', apiData);
 
-      return { 
-        id: docRef.id,
-        ...appointmentData,
-        status: appointmentData.status.toUpperCase()
-      };
+      // Make API call to book appointment
+      const response = await axios.post(
+        `${API_URL}/appointments`,
+        apiData,
+        { headers: getAuthHeader() }
+      );
+
+      return response.data;
     } catch (error) {
       console.error('Appointment booking error:', error);
-      throw error;
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error('Failed to book appointment. Please try again.');
+    }
+  },
+
+  async cancelAppointment(appointmentId) {
+    try {
+      const response = await axios.put(
+        `${API_URL}/appointments/${appointmentId}/cancel`,
+        {},
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Failed to cancel appointment. Please try again.');
     }
   }
 };
@@ -221,53 +264,80 @@ export const patientService = {
 export const doctorService = {
   async getDoctors() {
     try {
-      console.log('Fetching doctors...');
-      const doctorsQuery = query(
-        collection(db, 'users'),
-        where('role', 'in', ['DOCTOR', 'doctor'])
+      const response = await axios.get(
+        `${API_URL}/users?role=staff`,
+        { headers: getAuthHeader() }
       );
-      const doctorsSnapshot = await getDocs(doctorsQuery);
       
-      const doctors = doctorsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('Raw doctor data:', data); // Debug log
-        return {
-          id: doc.id,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          specialization: data.specialization, 
-          ...data
-        };
-      });
+      // Filter to only get doctors from the staff response
+      const allStaff = response.data || [];
+      
+      const doctors = allStaff
+        .filter(user => user.role === 'DOCTOR')
+        .map(doctor => {
+          // Parse name into firstName and lastName
+          const nameParts = (doctor.name || '').split(' ');
+          const firstName = nameParts[0] || 'Doctor';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
+          return {
+            id: doctor._id || doctor.id,
+            firstName: firstName,
+            lastName: lastName,
+            name: doctor.name,
+            specialization: doctor.specialization || 'General Practice',
+            department: doctor.department || 'Medical Department',
+            email: doctor.email,
+            phone: doctor.phone || doctor.phoneNumber,
+            experience: doctor.experience,
+            qualifications: doctor.qualifications,
+            licenseNumber: doctor.licenseNumber,
+            ...doctor
+          };
+        });
       
       return doctors;
     } catch (error) {
       console.error('Error fetching doctors:', error);
-      throw new Error('Unable to fetch doctors');
+      throw new Error('Unable to fetch doctors: ' + (error.response?.data?.error || error.message));
     }
   },
 
   async getNurses() {
     try {
-      console.log('Fetching nurses...');
-      const nursesQuery = query(
-        collection(db, 'users'),
-        where('role', 'in', ['NURSE', 'nurse'])
+      const response = await axios.get(
+        `${API_URL}/users?role=staff`,
+        { headers: getAuthHeader() }
       );
-      const nursesSnapshot = await getDocs(nursesQuery);
       
-      const nurses = nursesSnapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('Raw nurse data:', data); // Debug log
-        return {
-          id: doc.id,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          specialization: data.specialization, 
-          ...data
-        };
-      });
+      // Filter to only get nurses from the staff response
+      const allStaff = response.data || [];
       
+      const nurses = allStaff
+        .filter(user => user.role === 'NURSE')
+        .map(nurse => {
+          // Parse name into firstName and lastName
+          const nameParts = (nurse.name || '').split(' ');
+          const firstName = nameParts[0] || 'Nurse';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
+          return {
+            id: nurse._id || nurse.id,
+            firstName: firstName,
+            lastName: lastName,
+            name: nurse.name,
+            specialization: nurse.specialization || 'General Nursing',
+            department: nurse.department || 'Nursing Department',
+            email: nurse.email,
+            phone: nurse.phone || nurse.phoneNumber,
+            experience: nurse.experience,
+            qualifications: nurse.qualifications,
+            licenseNumber: nurse.licenseNumber,
+            ...nurse
+          };
+        });
+      
+      console.log(`Found ${nurses.length} nurses`);
       return nurses;
     } catch (error) {
       console.error('Error fetching nurses:', error);
@@ -282,23 +352,22 @@ export const doctorService = {
         throw new Error('Doctor ID and date are required');
       }
 
-      // Convert date to start and end of day
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
+      // Format date for API query
+      const queryDate = new Date(date).toISOString().split('T')[0];
 
-      // Query existing appointments for this doctor on this date
-      const appointmentsRef = collection(db, 'appointments');
-      const q = query(
-        appointmentsRef,
-        where('doctorId', '==', doctorId),
-        where('date', '>=', startDate),
-        where('date', '<=', endDate)
+      // Fetch existing appointments for this doctor on this date via API
+      const response = await axios.get(
+        `${API_URL}/appointments`,
+        { 
+          headers: getAuthHeader(),
+          params: {
+            doctorId: doctorId,
+            date: queryDate
+          }
+        }
       );
 
-      const appointmentsSnapshot = await getDocs(q);
-      const bookedAppointments = appointmentsSnapshot.docs.map(convertDoc);
+      const bookedAppointments = response.data || [];
 
       // Define standard time slots in 30-minute increments
       const standardTimeSlots = [
@@ -320,26 +389,13 @@ export const doctorService = {
         if (!slotTime) return false;
 
         return !bookedAppointments.some(appointment => {
-          // Handle string time format (HH:mm)
-          if (typeof appointment.time === 'string') {
-            const appointmentTime = parseTimeString(appointment.time);
-            return appointmentTime && 
-                   appointmentTime.hours === slotTime.hours && 
-                   appointmentTime.minutes === slotTime.minutes;
-          }
-          
-          // Handle Firestore Timestamp
-          if (appointment.time instanceof Timestamp) {
-            const appointmentDate = appointment.time.toDate();
-            return appointmentDate.getHours() === slotTime.hours && 
-                   appointmentDate.getMinutes() === slotTime.minutes;
-          }
-
-          return false;
+          const appointmentDate = new Date(appointment.date);
+          return appointmentDate.getHours() === slotTime.hours && 
+                 appointmentDate.getMinutes() === slotTime.minutes;
         });
       }).map(time => ({ 
         time, 
-        label: format(parse(time, 'HH:mm', new Date()), 'h:mm a')
+        label: this.formatTimeLabel(time)
       }));
 
       return availableTimeSlots;
@@ -347,6 +403,14 @@ export const doctorService = {
       console.error('Error fetching time slots:', error);
       throw error;
     }
+  },
+
+  // Helper method to format time labels
+  formatTimeLabel(time) {
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   },
 
   async getDoctorAppointments(doctorId) {
@@ -454,91 +518,76 @@ export const doctorService = {
     }
   },
 
+  // Get doctor's appointments (MongoDB)
+  async getDoctorAppointmentsMongo(doctorId) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/appointments/doctor/${doctorId}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching doctor appointments:', error);
+      throw error;
+    }
+  },
+
+  // Get nurse's appointments (MongoDB)
+  async getNurseAppointmentsMongo(nurseId) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/appointments/nurse/${nurseId}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching nurse appointments:', error);
+      throw error;
+    }
+  },
+
+  // Update appointment status (MongoDB)
+  async updateAppointmentStatusMongo(appointmentId, status) {
+    try {
+      const response = await axios.put(
+        `${API_URL}/appointments/${appointmentId}/status`,
+        { status },
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      throw error;
+    }
+  },
+
+  // Update appointment (MongoDB) - for rescheduling
+  async updateAppointmentMongo(appointmentId, updateData) {
+    try {
+      const response = await axios.put(
+        `${API_URL}/appointments/${appointmentId}`,
+        updateData,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      throw error;
+    }
+  },
+
   async getDoctorDashboardStats(doctorId) {
     try {
-      // Get doctor details
-      const doctorDoc = await getDoc(doc(db, 'doctors', doctorId));
-      if (!doctorDoc.exists()) {
-        throw new Error('Doctor not found');
-      }
-      const doctorData = doctorDoc.data();
-
-      // Get today's appointments
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      // Query appointments for the doctor
-      const appointmentsQuery = query(
-        collection(db, 'appointments'),
-        where('doctorId', '==', doctorId),
-        where('date', '>=', today),
-        where('date', '<', tomorrow)
-      );
-
-      const appointmentsSnapshot = await getDocs(appointmentsQuery);
-      const appointments = appointmentsSnapshot.docs.map(convertDoc);
-
-      // Calculate today's stats
-      const completedToday = appointments.filter(apt => 
-        apt.status?.toUpperCase() === 'COMPLETED'
-      ).length;
-
-      const pendingToday = appointments.filter(apt => 
-        !apt.status || 
-        apt.status?.toUpperCase() === 'PENDING'
-      ).length;
-
-      const cancelledToday = appointments.filter(apt => 
-        apt.status?.toUpperCase() === 'CANCELLED'
-      ).length;
-
-      // Get weekly appointments
-      const weekStart = new Date(today);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 7);
-
-      // Query for weekly appointments
-      const weeklyAppointmentsQuery = query(
-        collection(db, 'appointments'),
-        where('doctorId', '==', doctorId),
-        where('date', '>=', weekStart),
-        where('date', '<', weekEnd)
-      );
-
-      const weeklySnapshot = await getDocs(weeklyAppointmentsQuery);
-      const weeklyAppointments = weeklySnapshot.docs.map(convertDoc);
-
-      // Calculate weekly patient load
-      const maxWeeklyCapacity = 40;
-      const weeklyPatientLoad = Math.round((weeklyAppointments.length / maxWeeklyCapacity) * 100);
-
-      // Get recent notifications (last 5)
-      const notificationsQuery = query(
-        collection(db, 'notifications'),
-        where('userId', '==', doctorId),
-        orderBy('createdAt', 'desc'),
-        limit(5)
-      );
-
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const recentNotifications = notificationsSnapshot.docs.map(convertDoc);
-
-      // Calculate satisfaction rate (placeholder)
-      const satisfactionRate = 92;
-
+      // 1. Fetch doctor details from REST API (MongoDB backend)
+      const userRes = await axios.get(`${API_URL}/users/${doctorId}`, { headers: getAuthHeader() });
+      const doctorData = userRes.data;
+      // 2. Fetch dashboard stats for this doctor
+      const statsRes = await axios.get(`${API_URL}/appointments/stats`, { headers: getAuthHeader() });
+      const statsData = statsRes.data;
+      // 3. Compose doctorName (use 'name' field from MongoDB model)
       return {
-        doctorName: `${doctorData.firstName} ${doctorData.lastName}`,
-        stats: {
-          completedToday,
-          pendingToday,
-          cancelledToday,
-          weeklyPatientLoad,
-          satisfactionRate,
-        },
-        recentNotifications
+        doctorName: doctorData.name,
+        stats: statsData
       };
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -599,6 +648,142 @@ export const notificationService = {
       });
     } catch (error) {
       console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  }
+};
+
+// Leave service
+export const leaveService = {
+  // Get all leave requests
+  async getLeaves(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await axios.get(
+        `${API_URL}/leave${queryString ? `?${queryString}` : ''}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching leaves:', error);
+      throw error;
+    }
+  },
+
+  // Get leave requests for specific staff
+  async getStaffLeaves(staffId) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/leave/staff/${staffId}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching staff leaves:', error);
+      throw error;
+    }
+  },
+
+  // Create new leave request
+  async createLeave(leaveData) {
+    try {
+      const response = await axios.post(
+        `${API_URL}/leave`,
+        leaveData,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error creating leave:', error);
+      throw error;
+    }
+  },
+
+  // Update leave request
+  async updateLeave(leaveId, updateData) {
+    try {
+      const response = await axios.put(
+        `${API_URL}/leave/${leaveId}`,
+        updateData,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error updating leave:', error);
+      throw error;
+    }
+  },
+
+  // Delete leave request
+  async deleteLeave(leaveId) {
+    try {
+      await axios.delete(
+        `${API_URL}/leave/${leaveId}`,
+        { headers: getAuthHeader() }
+      );
+    } catch (error) {
+      console.error('Error deleting leave:', error);
+      throw error;
+    }
+  },
+
+  // Check if staff is on leave
+  async checkStaffLeave(staffId, date) {
+    try {
+      const response = await axios.get(
+        `${API_URL}/leave/check/${staffId}${date ? `?date=${date}` : ''}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error checking staff leave:', error);
+      throw error;
+    }
+  },
+
+  // Get available staff for a date
+  async getAvailableStaff(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await axios.get(
+        `${API_URL}/leave/available-staff${queryString ? `?${queryString}` : ''}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching available staff:', error);
+      throw error;
+    }
+  },
+
+  // Get leave calendar data
+  async getLeaveCalendar(startDate, endDate) {
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      
+      const response = await axios.get(
+        `${API_URL}/leave/calendar?${params.toString()}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching leave calendar:', error);
+      throw error;
+    }
+  },
+
+  // Get staff for dropdown (doctors and nurses)
+  async getStaff() {
+    try {
+      const response = await axios.get(
+        `${API_URL}/users?role=staff`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching staff:', error);
       throw error;
     }
   }
