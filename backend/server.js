@@ -78,6 +78,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/appointments', require('./routes/appointmentRoutes'));
 app.use('/api/patients', require('./routes/patientRoutes'));
 app.use('/api/leave', require('./routes/leaveRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
 
 // Global error handler
 app.use((err, req, res, next) => {

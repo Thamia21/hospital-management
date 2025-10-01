@@ -4,6 +4,7 @@ const Appointment = require('../models/Appointment');
 const Prescription = require('../models/Prescription');
 const Bill = require('../models/Bill');
 const Notification = require('../models/Notification');
+const Payment = require('../models/Payment');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 
@@ -88,15 +89,17 @@ router.get('/stats', auth, async (req, res) => {
 const verifyPatientAccess = async (req, res, next) => {
   try {
     const { patientId } = req.params;
-    
-    // In a real app, you'd verify JWT token and check if user can access this patient's data
-    // For now, we'll just check if the patient exists
-    const patient = await User.findById(patientId);
-    if (!patient) {
-      return res.status(404).json({ message: 'Patient not found' });
+
+    // Ideally verify JWT and ownership/permissions here.
+    // Try to find patient in Mongo; if not found, proceed with a stub to support Firebase UID flows during development.
+    let patient = null;
+    try {
+      patient = await User.findById(patientId);
+    } catch (_) {
+      // Ignore cast errors for non-ObjectId values
     }
-    
-    req.patient = patient;
+
+    req.patient = patient || { _id: patientId, role: 'PATIENT' };
     next();
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -184,7 +187,13 @@ router.get('/:patientId/bills', verifyPatientAccess, async (req, res) => {
   try {
     const { patientId } = req.params;
     
-    // For now, return mock data to avoid database issues
+    // Try to get real data from database first
+    const dbBills = await Bill.find({ patientId }).sort({ createdAt: -1 }).lean();
+    if (dbBills && dbBills.length) {
+      return res.json(dbBills);
+    }
+
+    // Fallback to mock data
     const mockBills = [
       {
         _id: '507f1f77bcf86cd799439011',
@@ -229,6 +238,100 @@ router.get('/:patientId/bills', verifyPatientAccess, async (req, res) => {
   } catch (error) {
     console.error('Error fetching bills:', error);
     res.status(500).json({ message: 'Failed to fetch bills', error: error.message });
+  }
+});
+
+// GET /api/patients/:patientId/payments
+router.get('/:patientId/payments', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    // Try to get real data from database first
+    const payments = await Payment.find({ patientId }).sort({ createdAt: -1 }).lean();
+
+    res.json(payments);
+  } catch (error) {
+    console.error('Error fetching payments:', error);
+    res.status(500).json({ message: 'Failed to fetch payments', error: error.message });
+  }
+});
+
+// POST /api/patients/:patientId/payments
+router.post('/:patientId/payments', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { amount, paymentMethod, billId, currency = 'USD', description, status, transactionId, processedAt, metadata } = req.body;
+
+    if (!amount || !paymentMethod) {
+      return res.status(400).json({ message: 'Amount and payment method are required' });
+    }
+    if (Number(amount) <= 0) {
+      return res.status(400).json({ message: 'Amount must be greater than 0' });
+    }
+
+    const newPayment = await Payment.create({
+      patientId,
+      billId: billId || null,
+      amount: Number(amount),
+      currency,
+      paymentMethod,
+      status: status || 'completed',
+      transactionId: transactionId || `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      paymentProvider: 'MANUAL',
+      description: description || 'Payment via billing interface',
+      processedAt: processedAt ? new Date(processedAt) : new Date(),
+      metadata: metadata || {},
+    });
+
+    // If linked to a bill, update its paid/balance fields
+    if (billId) {
+      try {
+        const completedForBill = await Payment.aggregate([
+          { $match: { billId: newPayment.billId, status: 'completed' } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        const paidAmount = completedForBill.length ? completedForBill[0].total : 0;
+
+        const bill = await Bill.findById(billId);
+        if (bill) {
+          const remaining = Math.max((bill.amount || 0) - paidAmount, 0);
+          const update = remaining <= 0
+            ? { status: 'paid', paidAmount: bill.amount, balance: 0, paidAt: new Date() }
+            : { paidAmount, balance: remaining };
+          await Bill.findByIdAndUpdate(billId, { ...update, updatedAt: new Date() });
+        }
+      } catch (billUpdateErr) {
+        console.error('Error updating bill after payment:', billUpdateErr);
+      }
+    }
+
+    res.status(201).json({ message: 'Payment processed successfully', payment: newPayment });
+  } catch (error) {
+    console.error('Error processing payment:', error);
+    res.status(500).json({ message: 'Failed to process payment', error: error.message });
+  }
+});
+
+// PUT /api/bills/:billId
+router.put('/bills/:billId', async (req, res) => {
+  try {
+    const { billId } = req.params;
+    const updateData = req.body || {};
+
+    const bill = await Bill.findByIdAndUpdate(
+      billId,
+      { ...updateData, updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!bill) {
+      return res.status(404).json({ message: 'Bill not found' });
+    }
+
+    res.json({ message: 'Bill updated successfully', bill });
+  } catch (error) {
+    console.error('Error updating bill:', error);
+    res.status(500).json({ message: 'Failed to update bill', error: error.message });
   }
 });
 

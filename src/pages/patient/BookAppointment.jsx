@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -14,6 +14,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
+import Switch from '@mui/material/Switch';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -24,6 +25,12 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { doctorService, patientService, leaveService } from '../../services/api';
+import axios from 'axios';
+import PayPalButton from '../../components/payments/PayPalButton';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
+
+const MySwal = withReactContent(Swal);
 
 const BUSINESS_HOURS = {
   start: 8, // 8 AM
@@ -43,6 +50,68 @@ export default function BookAppointment() {
   const [leaveWarning, setLeaveWarning] = useState('');
   const [alternativeStaff, setAlternativeStaff] = useState([]);
   const [checkingLeave, setCheckingLeave] = useState(false);
+  // Optional payment states
+  const [payNow, setPayNow] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState(null); // { orderId, capture }
+  const [paymentMessage, setPaymentMessage] = useState('');
+
+  // Local API client for recording payments
+  const API_URL = 'http://localhost:5000/api';
+  const getAuthHeader = () => {
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const handlePaymentSuccess = useCallback(async ({ orderId, capture }) => {
+    try {
+      if (!orderId) {
+        throw new Error('No order ID received from payment processor');
+      }
+
+      // Persist the payment to backend so it shows in Patient Billing
+      const captured = capture?.purchase_units?.[0]?.payments?.captures?.[0];
+      const amountValue = captured?.amount?.value ? Number(captured.amount.value) : 50;
+      const currencyCode = captured?.amount?.currency_code || 'ZAR';
+      const transactionId = captured?.id || orderId;
+
+      const paymentRecord = {
+        patientId: user.uid,
+        billId: null, // not linked to a specific bill for consultation prepayment
+        amount: amountValue,
+        currency: currencyCode,
+        paymentMethod: 'paypal',
+        status: 'completed',
+        transactionId,
+        description: 'Doctor Consultation Fee',
+        processedAt: new Date().toISOString(),
+        metadata: { orderId }
+      };
+
+      console.log('Saving payment to backend:', {
+        url: `${API_URL}/patients/${user.uid}/payments`,
+        paymentRecord
+      });
+      const saveRes = await axios.post(
+        `${API_URL}/patients/${user.uid}/payments`,
+        paymentRecord,
+        { headers: getAuthHeader() }
+      );
+      console.log('Payment saved response:', saveRes.status, saveRes.data);
+
+      setPaymentDetails({ orderId, capture });
+      setPaymentMessage('Payment successful. You can now submit your appointment.');
+      // Clear any previous errors
+      setError(prev => (prev && prev.includes('payment') ? '' : prev));
+    } catch (err) {
+      console.error('Error processing payment success:', err);
+      if (err.response) {
+        console.error('Payment save error response:', err.response.status, err.response.data);
+      }
+      setError('There was an issue saving your payment. Please try again.');
+      setPaymentDetails(null);
+      setPaymentMessage('');
+    }
+  }, [user?.uid]);
 
   // Fetch available doctors
   const { 
@@ -131,21 +200,66 @@ export default function BookAppointment() {
     }
   });
 
+  // Show success modal
+  const showSuccessModal = useCallback(() => {
+    return MySwal.fire({
+      title: 'Success!',
+      text: 'Your appointment has been booked successfully!',
+      icon: 'success',
+      confirmButtonColor: '#3085d6',
+      confirmButtonText: 'View Appointments',
+      showCancelButton: true,
+      cancelButtonText: 'Stay Here',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      allowEnterKey: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        navigate('/appointments', { 
+          state: { 
+            message: 'Appointment booked successfully!',
+            severity: 'success'
+          }
+        });
+      }
+    });
+  }, [navigate]);
+
+  // Show error modal
+  const showErrorModal = useCallback((error) => {
+    const isAuthError = error?.message?.includes('401') || error?.response?.status === 401;
+    const errorMessage = isAuthError 
+      ? 'Your session has expired. Please log in again.' 
+      : error?.message || 'Failed to book appointment. Please try again.';
+
+    return MySwal.fire({
+      title: 'Error',
+      text: errorMessage,
+      icon: 'error',
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'OK',
+      allowOutsideClick: false
+    }).then(() => {
+      if (isAuthError) {
+        // Clear auth and redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+      }
+    });
+  }, [navigate]);
+
   // Mutation for booking appointment
   const bookAppointmentMutation = useMutation({
     mutationFn: (appointmentData) => patientService.bookAppointment(appointmentData),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       console.log('Appointment booked successfully:', data);
-      navigate('/appointments', { 
-        state: { 
-          message: 'Appointment booked successfully!', 
-          severity: 'success' 
-        } 
-      });
+      setError('');
+      await showSuccessModal();
     },
     onError: (error) => {
       console.error('Appointment booking error:', error);
-      setError(error.message || 'Failed to book appointment');
+      showErrorModal(error);
     }
   });
 
@@ -195,19 +309,40 @@ export default function BookAppointment() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedDate || !selectedTime || !selectedStaff || !reason) {
-      setError('Please fill in all required fields');
-      return;
-    }
-
-    // Format date and time for API
-    const appointmentDateTime = new Date(selectedDate);
-    appointmentDateTime.setHours(selectedTime.getHours());
-    appointmentDateTime.setMinutes(selectedTime.getMinutes());
-    appointmentDateTime.setSeconds(0);
-    appointmentDateTime.setMilliseconds(0);
+    
+    // Show loading state
+    MySwal.fire({
+      title: 'Processing...',
+      text: 'Please wait while we book your appointment',
+      allowOutsideClick: false,
+      didOpen: () => {
+        MySwal.showLoading();
+      }
+    });
 
     try {
+      // Validate required fields
+      if (!selectedDate || !selectedTime || !selectedStaff || !reason) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      // Check if payment is required but not completed
+      if (payNow && !paymentDetails?.orderId) {
+        throw new Error('Please complete the payment process before submitting');
+      }
+
+      // Format date and time for API
+      const appointmentDateTime = new Date(selectedDate);
+      appointmentDateTime.setHours(selectedTime.getHours());
+      appointmentDateTime.setMinutes(selectedTime.getMinutes());
+      appointmentDateTime.setSeconds(0);
+      appointmentDateTime.setMilliseconds(0);
+
+      // Check if the selected time is in the past
+      if (appointmentDateTime < new Date()) {
+        throw new Error('Cannot book an appointment in the past');
+      }
+
       const appointmentData = {
         patientId: user.uid,
         date: appointmentDateTime.toISOString(),
@@ -223,11 +358,41 @@ export default function BookAppointment() {
         appointmentData.nurseId = selectedStaff;
       }
 
+      // If user opted to pay now and payment captured, attach payment metadata
+      if (payNow && paymentDetails?.orderId) {
+        appointmentData.paymentStatus = 'PAID';
+        appointmentData.paymentProvider = 'PAYPAL';
+        appointmentData.paymentOrderId = paymentDetails.orderId;
+        // Extract amount/currency from capture if available, default to 50 ZAR
+        const captured = paymentDetails.capture?.purchase_units?.[0]?.payments?.captures?.[0];
+        appointmentData.paymentAmount = captured?.amount?.value ? Number(captured.amount.value) : 50;
+        appointmentData.paymentCurrency = captured?.amount?.currency_code || 'ZAR';
+      } else if (payNow) {
+        // This should theoretically never happen due to the earlier check
+        throw new Error('Payment was required but no payment details were found');
+      }
+
       console.log('Submitting appointment:', appointmentData);
+      
+      // Submit the appointment
       await bookAppointmentMutation.mutateAsync(appointmentData);
+      
     } catch (error) {
       console.error('Booking error:', error);
-      setError(error.message || 'Failed to book appointment');
+      
+      // Close any open loading dialogs
+      MySwal.close();
+      
+      // Show error to user
+      if (error.message) {
+        await MySwal.fire({
+          title: 'Error',
+          text: error.message,
+          icon: 'error',
+          confirmButtonColor: '#d33',
+          confirmButtonText: 'OK'
+        });
+      }
     }
   };
 
@@ -240,6 +405,9 @@ export default function BookAppointment() {
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
           Schedule your appointment with our healthcare professionals
         </Typography>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <strong>Payment Notice:</strong> To see a doctor pay R50. Payment is optional and can be completed now via PayPal or at the facility.
+        </Alert>
         
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -410,6 +578,102 @@ export default function BookAppointment() {
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Please describe your symptoms or reason for the appointment"
               />
+            </Grid>
+
+            {/* Optional Payment Section */}
+            <Grid item xs={12}>
+              <Box sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                p: 2,
+                backgroundColor: 'background.paper'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      Pay Consultation Fee Now (Optional)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Secure payment via PayPal
+                    </Typography>
+                  </Box>
+                  <Switch
+                    checked={payNow}
+                    onChange={(e) => {
+                      const newPayNow = e.target.checked;
+                      setPayNow(newPayNow);
+                      if (!newPayNow) {
+                        setPaymentDetails(null);
+                        setPaymentMessage('');
+                      }
+                    }}
+                    color="primary"
+                  />
+                </Box>
+
+                {payNow && (
+                  <Box sx={{
+                    mt: 2,
+                    p: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    backgroundColor: 'background.default'
+                  }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="body1">Consultation Fee</Typography>
+                      <Typography variant="body1" fontWeight="bold">$2.70 USD (R50.00 ZAR)</Typography>
+                    </Box>
+
+                    {!paymentDetails ? (
+                      <Box sx={{ minHeight: '200px', display: 'flex', flexDirection: 'column' }}>
+                        <PayPalButton
+                          amount={"2.70"}
+                          currency="USD"
+                          description="Doctor Consultation Fee"
+                          onApproved={handlePaymentSuccess}
+                        />
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                          Secure payment processed by PayPal
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Alert
+                        severity="success"
+                        sx={{
+                          mb: 2,
+                          '& .MuiAlert-message': {
+                            width: '100%',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }
+                        }}
+                      >
+                        <span>Payment successful</span>
+                        <Button
+                          size="small"
+                          color="inherit"
+                          onClick={() => {
+                            setPayNow(false);
+                            setPaymentDetails(null);
+                            setPaymentMessage('');
+                          }}
+                        >
+                          Change
+                        </Button>
+                      </Alert>
+                    )}
+                  </Box>
+                )}
+              </Box>
+
+              {!payNow && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  You can choose to pay later at the facility. Your appointment will be confirmed once payment is received.
+                </Alert>
+              )}
             </Grid>
 
             {/* Submit Button */}

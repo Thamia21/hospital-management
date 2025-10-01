@@ -79,8 +79,14 @@ export default function PatientBilling() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchBillingData();
-  }, [user.uid]);
+    console.log('PatientBilling mounted. user =', user);
+    if (user && user.uid) {
+      console.log('Fetching billing data for uid =', user.uid);
+      fetchBillingData();
+    } else {
+      console.warn('PatientBilling: user.uid not available yet. Skipping initial fetch.');
+    }
+  }, [user && user.uid]);
 
   const fetchBillingData = async () => {
     try {
@@ -91,14 +97,18 @@ export default function PatientBilling() {
         `${API_URL}/patients/${user.uid}/bills`,
         { headers: getAuthHeader() }
       );
-      setBills(billsResponse.data || []);
+      const billsData = billsResponse.data || [];
+      console.log('Billing: fetched bills count =', billsData.length, billsData);
+      setBills(billsData);
 
       // Fetch payment history
       const paymentsResponse = await axios.get(
         `${API_URL}/patients/${user.uid}/payments`,
         { headers: getAuthHeader() }
       );
-      setPaymentHistory(paymentsResponse.data || []);
+      const paymentsData = paymentsResponse.data || [];
+      console.log('Billing: fetched payments count =', paymentsData.length, paymentsData);
+      setPaymentHistory(paymentsData);
     } catch (error) {
       console.error('Error fetching billing data:', error);
       setError('Failed to load billing information');
@@ -123,7 +133,7 @@ export default function PatientBilling() {
       // Create payment record
       const paymentRecord = {
         patientId: user.uid,
-        billId: selectedBill.id,
+        billId: selectedBill._id,
         amount: parseFloat(paymentData.amount),
         paymentMethod: paymentData.paymentMethod,
         status: 'completed', // In real app, this would be 'pending' until confirmed
@@ -144,7 +154,7 @@ export default function PatientBilling() {
         : { amount: remainingAmount };
       
       await axios.put(
-        `${API_URL}/bills/${selectedBill.id}`,
+        `${API_URL}/bills/${selectedBill._id}`,
         billUpdate,
         { headers: getAuthHeader() }
       );
@@ -214,9 +224,14 @@ export default function PatientBilling() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Billing & Payments
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Typography variant="h4" gutterBottom>
+          Billing & Payments
+        </Typography>
+        <Button variant="outlined" onClick={fetchBillingData} disabled={loading}>
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -287,15 +302,15 @@ export default function PatientBilling() {
             </TableHead>
             <TableBody>
               {bills.filter(bill => bill.status !== 'paid').map((bill) => (
-                <TableRow key={bill.id}>
-                  <TableCell>{bill.billNumber || bill.id.slice(-8)}</TableCell>
-                  <TableCell>{bill.service || 'Medical Service'}</TableCell>
+                <TableRow key={bill._id || bill.id}>
+                  <TableCell>{bill.billNumber || (bill._id ? bill._id.slice(-8) : bill.id?.slice(-8))}</TableCell>
+                  <TableCell>{bill.description || bill.service || 'Medical Service'}</TableCell>
                   <TableCell>
-                    {bill.createdAt?.toDate().toLocaleDateString()}
+                    {bill.createdAt ? new Date(bill.createdAt).toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell>{formatCurrency(bill.amount)}</TableCell>
                   <TableCell>
-                    {bill.dueDate?.toDate().toLocaleDateString()}
+                    {bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell>
                     <Chip 
@@ -361,10 +376,10 @@ export default function PatientBilling() {
             </TableHead>
             <TableBody>
               {paymentHistory.map((payment) => (
-                <TableRow key={payment.id}>
+                <TableRow key={payment._id || payment.id}>
                   <TableCell>{payment.transactionId}</TableCell>
                   <TableCell>
-                    {payment.createdAt?.toDate().toLocaleDateString()}
+                    {payment.createdAt ? new Date(payment.createdAt).toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell>{formatCurrency(payment.amount)}</TableCell>
                   <TableCell sx={{ display: 'flex', alignItems: 'center' }}>
@@ -413,7 +428,7 @@ export default function PatientBilling() {
                 Bill Details
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Service: {selectedBill.service || 'Medical Service'}
+                Service: {selectedBill.description || selectedBill.service || 'Medical Service'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 Amount Due: ${selectedBill.amount?.toFixed(2)}

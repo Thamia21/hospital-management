@@ -76,11 +76,17 @@ export default function PatientAppointments() {
     try {
       setLoading(true);
       setError('');
+      console.log('Current user ID:', user?.uid);
+      console.log('Auth token:', localStorage.getItem('token'));
+      
       const data = await patientService.getAppointments(user.uid);
+      console.log('Fetched appointments:', data);
+      
       setAppointments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      setError('Failed to load appointments');
+      console.error('Error details:', error.response?.data || error.message);
+      setError(`Failed to load appointments: ${error.message}`);
       setAppointments([]);
     } finally {
       setLoading(false);

@@ -123,30 +123,37 @@ export const patientService = {
 
   async getAppointments(userId) {
     try {
-      // Get appointments for the user via API (already populated with doctor details)
-      const response = await axios.get(`${API_URL}/patients/${userId}/appointments`, {
+      console.log('Fetching appointments for user:', userId);
+      // Get appointments for the user via API
+      const response = await axios.get(`${API_URL}/appointments/patient/${userId}`, {
         headers: getAuthHeader()
       });
-      const appointments = response.data || [];
+      console.log('Appointments API response:', response.data);
+      const appointments = Array.isArray(response.data) ? response.data : [];
 
       // Process appointments to ensure consistent data structure
       const processedAppointments = appointments.map((appointment) => {
+        // Check if doctorId is populated or if we have direct doctor info
+        const doctorInfo = appointment.doctorId?.name 
+          ? {
+              doctorName: appointment.doctorId.name,
+              doctorSpecialty: appointment.doctorId.specialization || appointment.doctorId.department || 'General'
+            }
+          : {
+              doctorName: appointment.doctorName || 'Unknown',
+              doctorSpecialty: appointment.doctorSpecialty || 'General'
+            };
+
         return {
           ...appointment,
-          // Handle populated doctor data
-          doctorName: appointment.doctorId?.name || appointment.doctorName || 'Unknown',
-          doctorSpecialty: appointment.doctorId?.specialization || appointment.doctorId?.department || appointment.doctorSpecialty || 'General',
+          ...doctorInfo,
           // Ensure date is a proper Date object
           date: new Date(appointment.date)
         };
       });
 
-      // Sort appointments by date
-      return processedAppointments.sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return dateA - dateB;
-      });
+      // Sort appointments by date (soonest first)
+      return processedAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
     } catch (error) {
       console.error('Error fetching appointments:', error);
       throw new Error('Failed to fetch appointments');
@@ -212,6 +219,23 @@ export const patientService = {
       
       // Add facilityId - use user's facilityId or a default one
       apiData.facilityId = currentUser.facilityId || '507f1f77bcf86cd799439011'; // Default facility ID
+
+      // Optional: forward payment metadata if present
+      if (appointmentData.paymentOrderId) {
+        apiData.paymentOrderId = appointmentData.paymentOrderId;
+      }
+      if (appointmentData.paymentStatus) {
+        apiData.paymentStatus = appointmentData.paymentStatus; // e.g., 'PAID'
+      }
+      if (appointmentData.paymentProvider) {
+        apiData.paymentProvider = appointmentData.paymentProvider; // e.g., 'PAYPAL'
+      }
+      if (appointmentData.paymentAmount) {
+        apiData.paymentAmount = appointmentData.paymentAmount;
+      }
+      if (appointmentData.paymentCurrency) {
+        apiData.paymentCurrency = appointmentData.paymentCurrency;
+      }
 
       // Remove undefined fields
       Object.keys(apiData).forEach(key => {
@@ -786,6 +810,89 @@ export const leaveService = {
       console.error('Error fetching staff:', error);
       throw error;
     }
+  }
+};
+
+// Payments service (PayPal REST via backend)
+export const paymentsService = {
+  getConfig() {
+    return axios.get(`${API_URL}/payments/config`)
+      .then(res => {
+        console.log('PayPal config response:', res.data);
+        if (!res.data.clientId) {
+          throw new Error('Invalid PayPal configuration: Missing client ID');
+        }
+        return res.data;
+      })
+      .catch(error => {
+        console.error('Error fetching PayPal config:', error);
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error('Response data:', error.response.data);
+          console.error('Response status:', error.response.status);
+          console.error('Response headers:', error.response.headers);
+          throw new Error(error.response.data?.error || 'Failed to load payment configuration');
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error('No response received:', error.request);
+          throw new Error('No response from payment server. Please check your connection.');
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.error('Error setting up request:', error.message);
+          throw new Error('Failed to initialize payment system');
+        }
+      });
+  },
+  
+  createOrder({ amount = '0.50', currency = 'USD', description = 'Consultation Fee' } = {}) {
+    console.log('Creating PayPal order:', { amount, currency, description });
+    return axios.post(
+      `${API_URL}/payments/create-order`, 
+      { amount, currency, description },
+      { 
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 seconds timeout
+      }
+    )
+    .then(res => {
+      console.log('Order created:', res.data);
+      return res.data;
+    })
+    .catch(error => {
+      console.error('Error creating PayPal order:', error);
+      throw error;
+    });
+  },
+  
+  captureOrder({ orderId, appointmentId } = {}) {
+    if (!orderId) {
+      return Promise.reject(new Error('Order ID is required'));
+    }
+    
+    console.log('Capturing PayPal order:', { orderId, appointmentId });
+    return axios.post(
+      `${API_URL}/payments/capture-order`,
+      { orderId, appointmentId },
+      { 
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 seconds timeout
+      }
+    )
+    .then(res => {
+      console.log('Order captured:', res.data);
+      return res.data;
+    })
+    .catch(error => {
+      console.error('Error capturing PayPal order:', error);
+      throw error;
+    });
   }
 };
 

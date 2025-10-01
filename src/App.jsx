@@ -299,11 +299,8 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
-        <Route path="/appointments" element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'NURSE']}>
-            <DoctorAppointments />
-          </ProtectedRoute>
-        } />
+        {/* Appointments route for patients is defined in the PatientLayout section */}
+        {/* Appointments for admin/nurses is handled by the doctor-appointments route */}
 
         <Route path="/patients" element={
           <ProtectedRoute allowedRoles={['ADMIN', 'NURSE']}>

@@ -21,6 +21,7 @@ A comprehensive, multilingual hospital management system built for South African
 - **Email Notifications**: Automatic confirmation, reschedule, and cancellation emails
 - **Multi-Provider Support**: Book with doctors or nurses
 - **Real-time Updates**: Live appointment status tracking
+- **Optional Payments**: Pay consultation fee via PayPal or pay later at facility
 
 ### 💊 **Comprehensive Medical Management**
 - **Electronic Medical Records**: Complete patient history and documentation
@@ -75,6 +76,7 @@ cp backend/.env.example backend/.env
 # - MongoDB connection string
 # - JWT secret key
 # - Email configuration (Gmail SMTP)
+# - (Optional) PayPal client credentials for payments
 ```
 
 ### 4. Set up MongoDB
@@ -105,6 +107,34 @@ npm run dev
 - **Frontend**: [http://localhost:5173](http://localhost:5173)
 - **Backend API**: [http://localhost:5000](http://localhost:5000)
 - **Demo Login**: Use any of the demo accounts listed above
+
+## 💳 Optional Payments (PayPal)
+
+Patients can optionally pay the consultation fee when booking an appointment. If they choose not to pay, they can still complete the booking and pay at the facility.
+
+### Backend Configuration
+
+Set the following variables in `backend/.env` (copied from `backend/.env.example`):
+
+```env
+PAYPAL_CLIENT_ID=your-paypal-client-id
+PAYPAL_SECRET=your-paypal-secret
+# Use 'sandbox' for testing or 'live' for production
+PAYPAL_MODE=sandbox
+```
+
+The backend exposes these routes (protected by auth):
+
+- `GET /api/payments/config` — returns PayPal `clientId` and mode
+- `POST /api/payments/create-order` — creates a PayPal order (defaults: 50.00 ZAR)
+- `POST /api/payments/capture-order` — captures a PayPal order and, if `appointmentId` is supplied, updates that appointment's payment fields
+
+### Frontend Usage
+
+- The booking page `src/pages/patient/BookAppointment.jsx` now displays an informational banner: "To see a doctor pay R50".
+- A toggle labeled "Pay Consultation Fee Now (Optional)" enables PayPal checkout.
+- On successful PayPal payment, the appointment is submitted with payment metadata recorded as paid.
+- If no payment is made, the appointment can still be booked as usual.
 
 ## 📁 Project Structure
 
