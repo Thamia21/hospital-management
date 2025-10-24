@@ -22,14 +22,14 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  CircularProgress,
-  Stack
+  CircularProgress
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Close as CloseIcon,
-  Save as SaveIcon
+  Save as SaveIcon,
+  MedicalServices as MedicalServicesIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -52,12 +52,6 @@ function TabPanel({ children, value, index, ...other }) {
     </div>
   );
 }
-
-const SecondaryText = ({ children }) => (
-  <Stack spacing={1}>
-    {children}
-  </Stack>
-);
 
 import { facilityApi } from '../../services/facilityApi';
 
@@ -95,7 +89,7 @@ export default function PatientDetails() {
   });
 
   const [newRecord, setNewRecord] = useState({
-    type: '',
+    type: '', // Keep 'type' for form, but map to 'recordType' when saving
     diagnosis: '',
     treatment: '',
     notes: ''
@@ -317,17 +311,68 @@ export default function PatientDetails() {
         setFacilities(facilitiesData);
       }
 
-      // Fetch medical records - TODO: Implement medical records service
-      // const recordsData = await medicalRecordService.getPatientRecords(patientId);
-      // setMedicalRecords(recordsData);
+      // Fetch medical records
+      try {
+        const medicalRecordsResponse = await fetch(`http://localhost:5000/api/appointments/medical-records?patientId=${patientId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
 
-      // Fetch appointments
-      const appointmentsData = await appointmentService.getPatientAppointments(patientId);
-      setAppointments(appointmentsData);
+        if (medicalRecordsResponse.ok) {
+          const medicalRecordsData = await medicalRecordsResponse.json();
+          setMedicalRecords(medicalRecordsData);
+          console.log('Medical records loaded:', medicalRecordsData.length);
+        } else {
+          console.error('Failed to fetch medical records:', medicalRecordsResponse.status);
+          setMedicalRecords([]);
+        }
+      } catch (err) {
+        console.error('Error fetching medical records:', err);
+        setMedicalRecords([]);
+      }
 
-      // Fetch test results - TODO: Implement test results service
-      // const testResultsData = await testResultService.getPatientTestResults(patientId);
-      // setTestResults(testResultsData);
+      // Fetch test results
+      try {
+        const testResultsResponse = await fetch(`http://localhost:5000/api/appointments/test-results?patientId=${patientId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (testResultsResponse.ok) {
+          const testResultsData = await testResultsResponse.json();
+          setTestResults(testResultsData);
+          console.log('Test results loaded:', testResultsData.length);
+        } else {
+          console.error('Failed to fetch test results:', testResultsResponse.status);
+          setTestResults([]);
+        }
+      } catch (err) {
+        console.error('Error fetching test results:', err);
+        setTestResults([]);
+      }
+
+      // Fetch prescriptions
+      try {
+        const prescriptionsResponse = await fetch(`http://localhost:5000/api/appointments/prescriptions?patientId=${patientId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (prescriptionsResponse.ok) {
+          const prescriptionsData = await prescriptionsResponse.json();
+          setPrescriptions(prescriptionsData);
+          console.log('Prescriptions loaded:', prescriptionsData.length);
+        } else {
+          console.error('Failed to fetch prescriptions:', prescriptionsResponse.status);
+          setPrescriptions([]);
+        }
+      } catch (err) {
+        console.error('Error fetching prescriptions:', err);
+        setPrescriptions([]);
+      }
     } catch (err) {
       console.error('Error fetching patient data:', err);
       setError(err.message);
@@ -343,9 +388,12 @@ export default function PatientDetails() {
       patientId,
       doctorId: user.uid,
       doctorName: user.displayName || user.email,
-      createdAt: serverTimestamp(),
-      status: 'PENDING_REVIEW'
+      prescribedDate: new Date(), // Use prescribedDate instead of createdAt
+      status: 'active', // Use 'active' instead of 'PENDING_REVIEW' to match model enum
+      instructions: newPrescription.notes // Map notes to instructions
     };
+    // Remove the 'notes' field as it's mapped to 'instructions'
+    delete prescriptionData.notes;
     setItemToReview(prescriptionData);
     setReviewType('prescription');
     setReviewModalOpen(true);
@@ -358,9 +406,13 @@ export default function PatientDetails() {
       patientId,
       doctorId: user.uid,
       doctorName: user.displayName || user.email,
-      createdAt: serverTimestamp(),
-      status: 'PENDING_REVIEW'
+      recordDate: new Date(), // Use recordDate instead of createdAt to avoid conflict
+      status: 'PENDING_REVIEW',
+      // Map frontend 'type' field to backend 'recordType' field with correct enum values
+      recordType: newRecord.type.toLowerCase().replace(' ', '_') // Convert "Consultation" to "consultation", "Lab Result" to "lab_result"
     };
+    // Remove the 'type' field as it's mapped to 'recordType'
+    delete recordData.type;
     setItemToReview(recordData);
     setReviewType('medical-record');
     setReviewModalOpen(true);
@@ -373,9 +425,27 @@ export default function PatientDetails() {
       patientId,
       doctorId: user.uid,
       doctorName: user.displayName || user.email,
-      createdAt: serverTimestamp(),
-      status: 'PENDING_REVIEW'
+      testDate: new Date(), // Use testDate instead of createdAt
+      status: 'PENDING_REVIEW',
+      // Map frontend fields to match backend model structure
+      results: [
+        {
+          parameter: newTest.testName,
+          value: newTest.resultValue || newTest.result,
+          unit: newTest.units,
+          referenceRange: newTest.referenceRange
+        }
+      ],
+      interpretation: newTest.notes // Map notes to interpretation
     };
+    // Remove individual fields that are now in the results array
+    delete testData.testName;
+    delete testData.result;
+    delete testData.resultValue;
+    delete testData.units;
+    delete testData.referenceRange;
+    delete testData.notes;
+
     setItemToReview(testData);
     setReviewType('test-result');
     setReviewModalOpen(true);
@@ -388,7 +458,7 @@ export default function PatientDetails() {
       patientId,
       doctorId: user.uid,
       doctorName: user.displayName || user.email,
-      createdAt: serverTimestamp(),
+      createdAt: new Date(),
       status: 'PENDING_REVIEW'
     };
     setItemToReview(appointmentData);
@@ -403,7 +473,6 @@ export default function PatientDetails() {
       let successMessage = '';
       let resetForm = null;
       let closeDialog = null;
-      // let notificationMethod = sendNotification; (notifications not available)
 
       switch (reviewType) {
         case 'prescription':
@@ -417,7 +486,6 @@ export default function PatientDetails() {
             notes: ''
           });
           closeDialog = () => setOpenPrescriptionDialog(false);
-          notificationMethod = sendPrescriptionNotification;
           break;
         case 'medical-record':
           collectionName = 'medicalRecords';
@@ -443,7 +511,6 @@ export default function PatientDetails() {
             notes: ''
           });
           closeDialog = () => setOpenTestDialog(false);
-          notificationMethod = sendTestResultsNotification;
           break;
         case 'appointment':
           collectionName = 'appointments';
@@ -457,37 +524,40 @@ export default function PatientDetails() {
           break;
       }
 
-      // Add to Firestore
-      const docRef = await addDoc(collection(db, collectionName), {
-        ...data,
-        status: 'SHARED',
-        isShared: true,
-        sharedAt: serverTimestamp()
-      });
-
-      // Send push notification to patient
+      // Save to MongoDB
       try {
-        // Send generic notification
-        await sendNotification(patientId, {
-          title: `New ${reviewType.replace('-', ' ')} Available`,
-          body: `Your doctor has shared a new ${reviewType.replace('-', ' ')} with you.`,
-          data: {
-            type: reviewType,
-            docId: docRef.id
-          }
+        // Use the correct API endpoint with proper base URL
+        const requestData = {
+          ...data,
+          status: 'SHARED',
+          isShared: true,
+          sharedAt: new Date()
+        };
+
+        console.log(`Sending ${reviewType} data to backend:`, requestData);
+
+        const response = await fetch(`http://localhost:5000/api/appointments/${reviewType === 'medical-record' ? 'medical-records' : reviewType === 'test-result' ? 'test-results' : 'prescriptions'}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(requestData)
         });
 
-        // Send specific type of notification if method exists
-        if (notificationMethod !== sendNotification) {
-          await notificationMethod({
-            patientId,
-            ...data,
-            docId: docRef.id
-          });
+        console.log(`Backend response status: ${response.status}`);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`Backend error response:`, errorData);
+          throw new Error(errorData.error || errorData.message || `Failed to save ${reviewType}`);
         }
-      } catch (notificationError) {
-        console.error('Failed to send notification:', notificationError);
-        // Non-critical error, so we'll continue with the rest of the process
+
+        const savedRecord = await response.json();
+        console.log(`${reviewType} saved successfully:`, savedRecord);
+      } catch (saveError) {
+        console.error(`Error saving ${reviewType}:`, saveError);
+        // Don't fail the whole process if saving fails
       }
 
       // Reset states
@@ -555,69 +625,69 @@ export default function PatientDetails() {
               <strong>Phone:</strong> {patientData?.phoneNumber || patientData?.phone || 'N/A'}
             </Typography>
             <Typography variant="body1" sx={{ mt: 2 }}>
-              <strong>Assigned Facilities:</strong>{' '}
-              {editFacilities ? (
-                <FormControl sx={{ minWidth: 220 }} size="small">
-                  <InputLabel id="facility-ids-label">Hospitals/Clinics</InputLabel>
-                  <Select
-                    labelId="facility-ids-label"
-                    multiple
-                    value={selectedFacilityIds}
-                    onChange={e => setSelectedFacilityIds(e.target.value)}
-                    renderValue={selected => selected.map(id => {
+              <strong>Assigned Facilities:</strong>
+            </Typography>
+            {editFacilities ? (
+              <FormControl sx={{ minWidth: 220, mt: 1 }} size="small">
+                <InputLabel id="facility-ids-label">Hospitals/Clinics</InputLabel>
+                <Select
+                  labelId="facility-ids-label"
+                  multiple
+                  value={selectedFacilityIds}
+                  onChange={e => setSelectedFacilityIds(e.target.value)}
+                  renderValue={selected => selected.map(id => {
+                    const facility = facilities.find(f => f._id === id);
+                    return facility ? facility.name : id;
+                  }).join(', ')}
+                >
+                  {facilities.map(facility => (
+                    <MenuItem key={facility._id} value={facility._id}>
+                      {facility.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <Typography variant="body1" sx={{ ml: 2 }}>
+                {patientData?.facilityNames?.length > 0 
+                  ? patientData.facilityNames.join(', ')
+                  : (patientData?.facilityIds || []).map(id => {
                       const facility = facilities.find(f => f._id === id);
                       return facility ? facility.name : id;
-                    }).join(', ')}
-                  >
-                    {facilities.map(facility => (
-                      <MenuItem key={facility._id} value={facility._id}>
-                        {facility.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
+                    }).join(', ') || 'N/A'}
+              </Typography>
+            )}
+            {user?.role === 'ADMIN' || user?.role === 'DOCTOR' || user?.role === 'NURSE' ? (
+              editFacilities ? (
+                <Button sx={{ ml: 2 }} size="small" variant="contained" color="success" onClick={async () => {
+                  setLoading(true);
+                  setError(null);
+                  try {
+                    // Update patient in backend (replace with your update logic)
+                    await fetch(`/api/users/${patientId}`, {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${localStorage.getItem('token')}`
+                      },
+                      body: JSON.stringify({ facilityIds: selectedFacilityIds })
+                    });
+                    setPatientData(prev => ({ ...prev, facilityIds: selectedFacilityIds }));
+                    setEditFacilities(false);
+                  } catch (err) {
+                    setError('Failed to update facilities');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}>
+                  Save
+                </Button>
               ) : (
-                <>
-                  {patientData?.facilityNames?.length > 0 
-                    ? patientData.facilityNames.join(', ')
-                    : (patientData?.facilityIds || []).map(id => {
-                        const facility = facilities.find(f => f._id === id);
-                        return facility ? facility.name : id;
-                      }).join(', ') || 'N/A'}
-                </>
-              )}
-              {user?.role === 'ADMIN' || user?.role === 'DOCTOR' || user?.role === 'NURSE' ? (
-                editFacilities ? (
-                  <Button sx={{ ml: 2 }} size="small" variant="contained" color="success" onClick={async () => {
-                    setLoading(true);
-                    setError(null);
-                    try {
-                      // Update patient in backend (replace with your update logic)
-                      await fetch(`/api/users/${patientId}`, {
-                        method: 'PUT',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Authorization: `Bearer ${localStorage.getItem('token')}`
-                        },
-                        body: JSON.stringify({ facilityIds: selectedFacilityIds })
-                      });
-                      setPatientData(prev => ({ ...prev, facilityIds: selectedFacilityIds }));
-                      setEditFacilities(false);
-                    } catch (err) {
-                      setError('Failed to update facilities');
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}>
-                    Save
-                  </Button>
-                ) : (
-                  <Button sx={{ ml: 2 }} size="small" variant="outlined" onClick={() => setEditFacilities(true)}>
-                    Edit
-                  </Button>
-                )
-              ) : null}
-            </Typography>
+                <Button sx={{ ml: 2 }} size="small" variant="outlined" onClick={() => setEditFacilities(true)}>
+                  Edit
+                </Button>
+              )
+            ) : null}
           </Grid>
           <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start' }}>
             <Button
@@ -627,6 +697,13 @@ export default function PatientDetails() {
               sx={{ mr: 1 }}
             >
               Schedule Appointment
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<MedicalServicesIcon />}
+              onClick={() => navigate(`/patient/${patientId}/medical-records`)}
+            >
+              View Medical Records
             </Button>
           </Grid>
         </Grid>
@@ -652,28 +729,46 @@ export default function PatientDetails() {
           </Box>
           <List>
             {medicalRecords.map((record, index) => (
-              <React.Fragment key={record.id}>
+              <React.Fragment key={record.id || `medical-record-${index}`}>
                 <ListItem>
                   <ListItemText
                     primary={
                       <Typography variant="subtitle1">
-                        <strong>{record.type}</strong> - {new Date(record.createdAt).toLocaleDateString()}
+                        <strong>{record.recordType}</strong> - {new Date(record.recordDate).toLocaleDateString()}
                       </Typography>
                     }
                     secondary={
-                      <SecondaryText>
-                        <Box component="span">
-                          <strong>Diagnosis:</strong> {record.diagnosis}
-                        </Box>
-                        <Box component="span">
-                          <strong>Treatment:</strong> {record.treatment}
-                        </Box>
-                        {record.notes && (
+                      <>
+                        {record.diagnosis && (
                           <Box component="span">
-                            <strong>Notes:</strong> {record.notes}
+                            <strong>Diagnosis:</strong> {record.diagnosis}
                           </Box>
                         )}
-                      </SecondaryText>
+                        {record.description && (
+                          <>
+                            <br />
+                            <Box component="span">
+                              <strong>Description:</strong> {record.description}
+                            </Box>
+                          </>
+                        )}
+                        {record.treatment && (
+                          <>
+                            <br />
+                            <Box component="span">
+                              <strong>Treatment:</strong> {record.treatment}
+                            </Box>
+                          </>
+                        )}
+                        {record.notes && (
+                          <>
+                            <br />
+                            <Box component="span">
+                              <strong>Notes:</strong> {record.notes}
+                            </Box>
+                          </>
+                        )}
+                      </>
                     }
                   />
                 </ListItem>
@@ -700,30 +795,33 @@ export default function PatientDetails() {
           </Box>
           <List>
             {testResults.map((test, index) => (
-              <React.Fragment key={test.id}>
+              <React.Fragment key={test.id || `test-result-${index}`}>
                 <ListItem>
                   <ListItemText
-                    primary={`${test.testType}: ${test.testName} - ${new Date(test.date).toLocaleDateString()}`}
+                    primary={`${test.testName} - ${new Date(test.testDate).toLocaleDateString()}`}
                     secondary={
-                      <SecondaryText>
-                        <Box component="span">
-                          <strong>Result:</strong> {test.result}
-                          {test.resultValue && test.units && ` (${test.resultValue} ${test.units})`}
-                        </Box>
-                        {test.referenceRange && (
-                          <Box component="span">
-                            <strong>Reference Range:</strong> {test.referenceRange}
+                      <>
+                        {test.results && test.results.length > 0 && test.results.map((result, idx) => (
+                          <Box key={idx} component="span">
+                            <strong>{result.parameter}:</strong> {result.value}
+                            {result.unit && ` ${result.unit}`}
+                            {result.referenceRange && ` (Ref: ${result.referenceRange})`}
+                            {idx < test.results.length - 1 && <br />}
                           </Box>
+                        ))}
+                        {test.interpretation && (
+                          <>
+                            <br />
+                            <Box component="span">
+                              <strong>Interpretation:</strong> {test.interpretation}
+                            </Box>
+                          </>
                         )}
-                        {test.notes && (
-                          <Box component="span">
-                            <strong>Notes:</strong> {test.notes}
-                          </Box>
-                        )}
+                        <br />
                         <Box component="span">
                           <strong>Status:</strong> {test.status}
                         </Box>
-                      </SecondaryText>
+                      </>
                     }
                   />
                 </ListItem>
@@ -750,27 +848,32 @@ export default function PatientDetails() {
           </Box>
           <List>
             {prescriptions.map((prescription, index) => (
-              <React.Fragment key={prescription.id}>
+              <React.Fragment key={prescription.id || `prescription-${index}`}>
                 <ListItem>
                   <ListItemText
-                    primary={`${prescription.medication} - ${new Date(prescription.createdAt).toLocaleDateString()}`}
+                    primary={`${prescription.medication} - ${new Date(prescription.prescribedDate).toLocaleDateString()}`}
                     secondary={
-                      <SecondaryText>
+                      <>
                         <Box component="span">
                           <strong>Dosage:</strong> {prescription.dosage}
                         </Box>
+                        <br />
                         <Box component="span">
                           <strong>Frequency:</strong> {prescription.frequency}
                         </Box>
+                        <br />
                         <Box component="span">
                           <strong>Duration:</strong> {prescription.duration}
                         </Box>
-                        {prescription.notes && (
-                          <Box component="span">
-                            <strong>Notes:</strong> {prescription.notes}
-                          </Box>
+                        {prescription.instructions && (
+                          <>
+                            <br />
+                            <Box component="span">
+                              <strong>Instructions:</strong> {prescription.instructions}
+                            </Box>
+                          </>
                         )}
-                      </SecondaryText>
+                      </>
                     }
                   />
                 </ListItem>
@@ -788,27 +891,32 @@ export default function PatientDetails() {
         <TabPanel value={tabValue} index={3}>
           <List>
             {appointments.map((appointment, index) => (
-              <React.Fragment key={appointment.id}>
+              <React.Fragment key={appointment.id || `appointment-${index}`}>
                 <ListItem>
                   <ListItemText
                     primary={new Date(appointment.date).toLocaleString()}
                     secondary={
-                      <SecondaryText>
+                      <>
                         <Box component="span">
                           <strong>Type:</strong> {appointment.type}
                         </Box>
+                        <br />
                         <Box component="span">
                           <strong>Reason:</strong> {appointment.reason}
                         </Box>
+                        <br />
                         <Box component="span">
                           <strong>Status:</strong> {appointment.status}
                         </Box>
                         {appointment.notes && (
-                          <Box component="span">
-                            <strong>Notes:</strong> {appointment.notes}
-                          </Box>
+                          <>
+                            <br />
+                            <Box component="span">
+                              <strong>Notes:</strong> {appointment.notes}
+                            </Box>
+                          </>
                         )}
-                      </SecondaryText>
+                      </>
                     }
                   />
                 </ListItem>
@@ -1209,74 +1317,77 @@ export default function PatientDetails() {
                     <strong>Duration:</strong> {itemToReview.duration}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Notes:</strong> {itemToReview.notes}
-                  </Typography>
-                </Grid>
+                {itemToReview.instructions && (
+                  <Grid item xs={12}>
+                    <Typography variant="body1">
+                      <strong>Instructions:</strong> {itemToReview.instructions}
+                    </Typography>
+                  </Grid>
+                )}
               </React.Fragment>
             )}
             {reviewType === 'medical-record' && (
               <React.Fragment>
                 <Grid item xs={12}>
                   <Typography variant="body1">
-                    <strong>Type:</strong> {itemToReview.type}
+                    <strong>Type:</strong> {itemToReview.recordType}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Diagnosis:</strong> {itemToReview.diagnosis}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Treatment:</strong> {itemToReview.treatment}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Notes:</strong> {itemToReview.notes}
-                  </Typography>
-                </Grid>
+                {itemToReview.diagnosis && (
+                  <Grid item xs={12}>
+                    <Typography variant="body1">
+                      <strong>Diagnosis:</strong> {itemToReview.diagnosis}
+                    </Typography>
+                  </Grid>
+                )}
+                {itemToReview.description && (
+                  <Grid item xs={12}>
+                    <Typography variant="body1">
+                      <strong>Description:</strong> {itemToReview.description}
+                    </Typography>
+                  </Grid>
+                )}
+                {itemToReview.treatment && (
+                  <Grid item xs={12}>
+                    <Typography variant="body1">
+                      <strong>Treatment:</strong> {itemToReview.treatment}
+                    </Typography>
+                  </Grid>
+                )}
+                {itemToReview.notes && (
+                  <Grid item xs={12}>
+                    <Typography variant="body1">
+                      <strong>Notes:</strong> {itemToReview.notes}
+                    </Typography>
+                  </Grid>
+                )}
               </React.Fragment>
             )}
             {reviewType === 'test-result' && (
               <React.Fragment>
                 <Grid item xs={12}>
                   <Typography variant="body1">
-                    <strong>Test Type:</strong> {itemToReview.testType}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
                     <strong>Test Name:</strong> {itemToReview.testName}
                   </Typography>
                 </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Result:</strong> {itemToReview.result}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Result Value:</strong> {itemToReview.resultValue}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Units:</strong> {itemToReview.units}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Reference Range:</strong> {itemToReview.referenceRange}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Notes:</strong> {itemToReview.notes}
-                  </Typography>
-                </Grid>
+                {itemToReview.results && itemToReview.results.length > 0 && itemToReview.results.map((result, idx) => (
+                  <React.Fragment key={idx}>
+                    <Grid item xs={12}>
+                      <Typography variant="body1">
+                        <strong>{result.parameter}:</strong> {result.value}
+                        {result.unit && ` ${result.unit}`}
+                        {result.referenceRange && ` (Ref: ${result.referenceRange})`}
+                      </Typography>
+                    </Grid>
+                  </React.Fragment>
+                ))}
+                {itemToReview.interpretation && (
+                  <Grid item xs={12}>
+                    <Typography variant="body1">
+                      <strong>Interpretation:</strong> {itemToReview.interpretation}
+                    </Typography>
+                  </Grid>
+                )}
               </React.Fragment>
             )}
             {reviewType === 'appointment' && (

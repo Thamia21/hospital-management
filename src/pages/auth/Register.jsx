@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -53,20 +53,25 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { facilityApi } from '../../services/facilityApi';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
   
-  // Form state
-  const [activeStep, setActiveStep] = useState(0);
+  // Facilities state
+  const [facilities, setFacilities] = useState([]);
+  const [facilitiesLoading, setFacilitiesLoading] = useState(false);
+
+  // Registration state
   const [selectedRole, setSelectedRole] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [activeStep, setActiveStep] = useState(0);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -86,12 +91,8 @@ const Register = () => {
     emergencyContact: '',
     emergencyPhone: '',
     
-    // Professional fields
-    specialization: '',
-    licenseNumber: '',
-    department: '',
-    qualifications: '',
-    experience: ''
+    // Facility selection for patients
+    facilityId: ''
   });
 
   const steps = ['Choose Role', 'Basic Information', 'Additional Details', 'Verification'];
@@ -145,6 +146,25 @@ const Register = () => {
     setActiveStep(prev => prev - 1);
   };
 
+  useEffect(() => {
+    const fetchFacilities = async () => {
+      if (selectedRole === 'patient') {
+        setFacilitiesLoading(true);
+        try {
+          const facilitiesData = await facilityApi.getAll();
+          setFacilities(facilitiesData);
+        } catch (error) {
+          console.error('Error fetching facilities:', error);
+          // Continue without facilities if API fails
+        } finally {
+          setFacilitiesLoading(false);
+        }
+      }
+    };
+
+    fetchFacilities();
+  }, [selectedRole]);
+
   const validateStep = (step) => {
     switch (step) {
       case 0: // Role selection
@@ -174,7 +194,7 @@ const Register = () => {
       
       case 2: // Additional details
         if (selectedRole === 'patient') {
-          const requiredPatient = ['idNumber', 'dateOfBirth', 'gender', 'address'];
+          const requiredPatient = ['idNumber', 'dateOfBirth', 'gender', 'address', 'facilityId'];
           for (let field of requiredPatient) {
             if (!formData[field]) {
               setError(`${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`);
@@ -224,7 +244,8 @@ const Register = () => {
           gender: formData.gender,
           address: formData.address,
           emergencyContact: formData.emergencyContact,
-          emergencyPhone: formData.emergencyPhone
+          emergencyPhone: formData.emergencyPhone,
+          facilityId: formData.facilityId
         }),
         ...((['doctor', 'nurse'].includes(selectedRole)) && {
           licenseNumber: formData.licenseNumber,
@@ -541,6 +562,26 @@ const Register = () => {
                       <MenuItem value="female">Female</MenuItem>
                       <MenuItem value="other">Other</MenuItem>
                       <MenuItem value="prefer-not-to-say">Prefer not to say</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <FormControl fullWidth>
+                    <InputLabel id="facility-label">Select Healthcare Facility</InputLabel>
+                    <Select
+                      labelId="facility-label"
+                      label="Select Healthcare Facility"
+                      value={formData.facilityId}
+                      onChange={(e) => handleInputChange('facilityId', e.target.value)}
+                    >
+                      <MenuItem value="">
+                        <em>Select a facility</em>
+                      </MenuItem>
+                      {facilities.map((facility) => (
+                        <MenuItem key={facility._id} value={facility._id}>
+                          {facility.name}
+                        </MenuItem>
+                      ))}
                     </Select>
                   </FormControl>
                 </Grid>

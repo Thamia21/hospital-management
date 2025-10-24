@@ -81,8 +81,10 @@ export default function PatientAppointments() {
       
       const data = await patientService.getAppointments(user.uid);
       console.log('Fetched appointments:', data);
-      
+
       setAppointments(Array.isArray(data) ? data : []);
+      console.log('Final appointments count:', appointments.length);
+      console.log('Sample appointment:', appointments[0] || 'No appointments');
     } catch (error) {
       console.error('Error fetching appointments:', error);
       console.error('Error details:', error.response?.data || error.message);
@@ -99,7 +101,7 @@ export default function PatientAppointments() {
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(apt => 
-        apt.doctor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        apt.doctorName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         apt.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         apt.department?.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -362,7 +364,7 @@ export default function PatientAppointments() {
               </TableHead>
               <TableBody>
                 {filteredAppointments.map((appointment) => (
-                  <TableRow key={appointment.id} hover>
+                  <TableRow key={appointment._id || appointment.id || `${appointment.date}-${appointment.time}`} hover>
                     <TableCell>
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: 600 }}>
@@ -377,7 +379,7 @@ export default function PatientAppointments() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <DoctorIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
                         <Typography variant="body2">
-                          {appointment.doctor || 'Not assigned'}
+                          {appointment.doctorName || appointment.doctor || 'Not assigned'}
                         </Typography>
                       </Box>
                     </TableCell>
@@ -388,7 +390,7 @@ export default function PatientAppointments() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {appointment.department || 'General Medicine'}
+                        {appointment.doctorSpecialty || appointment.department || 'General Medicine'}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -462,7 +464,7 @@ export default function PatientAppointments() {
                   Doctor
                 </Typography>
                 <Typography variant="body1">
-                  {selectedAppointment.doctor || 'Not assigned'}
+                  {selectedAppointment.doctorName || selectedAppointment.doctor || 'Not assigned'}
                 </Typography>
               </Box>
               
@@ -471,7 +473,7 @@ export default function PatientAppointments() {
                   Department
                 </Typography>
                 <Typography variant="body1">
-                  {selectedAppointment.department || 'General Medicine'}
+                  {selectedAppointment.doctorSpecialty || selectedAppointment.department || 'General Medicine'}
                 </Typography>
               </Box>
               

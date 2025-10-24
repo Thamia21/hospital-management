@@ -57,6 +57,12 @@ export const userService = {
     const res = await axios.get(`${API_URL}/users`, { headers: getAuthHeader() });
     return res.data;
   },
+
+  async getUsersWithRole(role) {
+    const res = await axios.get(`${API_URL}/users?role=${role}`, { headers: getAuthHeader() });
+    return res.data;
+  },
+
   async getUserById(userId) {
     const res = await axios.get(`${API_URL}/users/${userId}`, { headers: getAuthHeader() });
     return res.data;
@@ -220,21 +226,46 @@ export const patientService = {
       // Add facilityId - use user's facilityId or a default one
       apiData.facilityId = currentUser.facilityId || '507f1f77bcf86cd799439011'; // Default facility ID
 
-      // Optional: forward payment metadata if present
-      if (appointmentData.paymentOrderId) {
-        apiData.paymentOrderId = appointmentData.paymentOrderId;
+      // Add payment method and related fields
+      if (appointmentData.paymentMethod) {
+        apiData.paymentMethod = appointmentData.paymentMethod;
       }
       if (appointmentData.paymentStatus) {
-        apiData.paymentStatus = appointmentData.paymentStatus; // e.g., 'PAID'
-      }
-      if (appointmentData.paymentProvider) {
-        apiData.paymentProvider = appointmentData.paymentProvider; // e.g., 'PAYPAL'
+        apiData.paymentStatus = appointmentData.paymentStatus;
       }
       if (appointmentData.paymentAmount) {
         apiData.paymentAmount = appointmentData.paymentAmount;
       }
       if (appointmentData.paymentCurrency) {
         apiData.paymentCurrency = appointmentData.paymentCurrency;
+      }
+
+      // Add payment method specific fields
+      if (appointmentData.medicalAidNumber) {
+        apiData.medicalAidNumber = appointmentData.medicalAidNumber;
+      }
+      if (appointmentData.medicalAidProvider) {
+        apiData.medicalAidProvider = appointmentData.medicalAidProvider;
+      }
+      if (appointmentData.insurancePolicyNumber) {
+        apiData.insurancePolicyNumber = appointmentData.insurancePolicyNumber;
+      }
+      if (appointmentData.insuranceProvider) {
+        apiData.insuranceProvider = appointmentData.insuranceProvider;
+      }
+      if (appointmentData.bankReferenceNumber) {
+        apiData.bankReferenceNumber = appointmentData.bankReferenceNumber;
+      }
+      if (appointmentData.paymentNotes) {
+        apiData.paymentNotes = appointmentData.paymentNotes;
+      }
+
+      // Legacy payment fields (for backward compatibility)
+      if (appointmentData.paymentOrderId) {
+        apiData.paymentOrderId = appointmentData.paymentOrderId;
+      }
+      if (appointmentData.paymentProvider) {
+        apiData.paymentProvider = appointmentData.paymentProvider;
       }
 
       // Remove undefined fields
@@ -546,8 +577,11 @@ export const doctorService = {
   async getDoctorAppointmentsMongo(doctorId) {
     try {
       const response = await axios.get(
-        `${API_URL}/appointments/doctor/${doctorId}`,
-        { headers: getAuthHeader() }
+        `${API_URL}/appointments`,
+        {
+          headers: getAuthHeader(),
+          params: { doctorId: doctorId }
+        }
       );
       return response.data || [];
     } catch (error) {
@@ -560,8 +594,11 @@ export const doctorService = {
   async getNurseAppointmentsMongo(nurseId) {
     try {
       const response = await axios.get(
-        `${API_URL}/appointments/nurse/${nurseId}`,
-        { headers: getAuthHeader() }
+        `${API_URL}/appointments`,
+        {
+          headers: getAuthHeader(),
+          params: { nurseId: nurseId }
+        }
       );
       return response.data || [];
     } catch (error) {

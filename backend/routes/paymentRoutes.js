@@ -1,156 +1,119 @@
 const express = require('express');
-const axios = require('axios');
 const auth = require('../middleware/auth');
 const Appointment = require('../models/Appointment');
 
 const router = express.Router();
 
-const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID || '';
-const PAYPAL_SECRET = process.env.PAYPAL_SECRET || '';
-const PAYPAL_MODE = (process.env.PAYPAL_MODE || 'sandbox').toLowerCase(); // 'sandbox' | 'live'
-
-const PAYPAL_BASE_URL = PAYPAL_MODE === 'live'
-  ? 'https://api-m.paypal.com'
-  : 'https://api-m.sandbox.paypal.com';
-
-async function getAccessToken() {
-  const authString = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
-  const res = await axios.post(
-    `${PAYPAL_BASE_URL}/v1/oauth2/token`,
-    new URLSearchParams({ grant_type: 'client_credentials' }),
-    {
-      headers: {
-        Authorization: `Basic ${authString}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    }
-  );
-  return res.data.access_token;
+// Initialize Stripe
+let stripe = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  console.log('✅ Stripe initialized successfully');
+} else {
+  console.error('⚠️ STRIPE_SECRET_KEY not found in environment variables');
 }
 
-// Get PayPal config (client id and mode) - public endpoint
+// -------------------
+// Stripe Config (frontend)
 router.get('/config', async (req, res) => {
   try {
-    console.log('Received request for PayPal config');
-    
-    if (!PAYPAL_CLIENT_ID) {
-      console.error('PAYPAL_CLIENT_ID is not configured on the server');
-      return res.status(500).json({ 
-        error: 'Payment system is not properly configured',
-        details: 'Missing PayPal client ID in server configuration'
-      });
-    }
+    const publishableKey = process.env.VITE_STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_PUBLISHABLE_KEY;
 
-    if (!PAYPAL_SECRET) {
-      console.error('PAYPAL_SECRET is not configured on the server');
+    if (!publishableKey) {
       return res.status(500).json({
         error: 'Payment system is not properly configured',
-        details: 'Missing PayPal secret in server configuration'
+        details: 'Missing Stripe publishable key in server configuration'
       });
     }
 
-    console.log('Returning PayPal config:', { 
-      clientId: PAYPAL_CLIENT_ID ? '***' + PAYPAL_CLIENT_ID.slice(-4) : 'missing',
-      mode: PAYPAL_MODE 
-    });
-
-    res.json({ 
-      clientId: PAYPAL_CLIENT_ID, 
-      mode: PAYPAL_MODE 
+    res.json({
+      publishableKey,
+      currency: 'zar'
     });
   } catch (err) {
     console.error('Error in /config endpoint:', err);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to load payment configuration',
       details: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 });
 
-// Create PayPal order
-router.post('/create-order', auth, async (req, res) => {
+// -------------------
+// Create Stripe Payment Intent
+router.post('/create-payment-intent', async (req, res) => {
   try {
-    const { amount = '50.00', currency = 'USD', description = 'Consultation Fee' } = req.body || {};
+    if (!stripe) {
+      return res.status(500).json({
+        error: 'Payment system not configured',
+        details: 'Stripe secret key not found'
+      });
+    }
 
-    const accessToken = await getAccessToken();
-    const orderRes = await axios.post(
-      `${PAYPAL_BASE_URL}/v2/checkout/orders`,
-      {
-        intent: 'CAPTURE',
-        purchase_units: [
-          {
-            amount: {
-              currency_code: currency,
-              value: amount
-            },
-            description
-          }
-        ]
+    const { amount, currency = 'zar', billId } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: 'Valid amount is required' });
+    }
+
+    const amountInCents = Math.round(amount * 100);
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: currency.toLowerCase(),
+      metadata: {
+        billId: billId || '',
+        patientId: req.user?.id || req.user?._id || 'anonymous'
       },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+      automatic_payment_methods: { enabled: true },
+    });
 
-    res.json(orderRes.data);
-  } catch (err) {
-    console.error('PayPal create-order error:', err.response?.data || err.message);
-    res.status(500).json({ error: err.response?.data || err.message });
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id
+    });
+  } catch (error) {
+    console.error('Stripe Payment Intent creation error:', error);
+    res.status(500).json({
+      error: 'Failed to create payment intent',
+      details: error.message
+    });
   }
 });
 
-// Capture PayPal order and optionally attach to appointment
-router.post('/capture-order', auth, async (req, res) => {
+// -------------------
+// Optional: Stripe Webhook endpoint
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   try {
-    const { orderId, appointmentId } = req.body;
-    if (!orderId) return res.status(400).json({ error: 'orderId is required' });
+    const sig = req.headers['stripe-signature'];
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    const accessToken = await getAccessToken();
-    const captureRes = await axios.post(
-      `${PAYPAL_BASE_URL}/v2/checkout/orders/${orderId}/capture`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    let event;
 
-    const capture = captureRes.data;
-
-    // If appointmentId is provided, update appointment payment fields
-    if (appointmentId) {
-      try {
-        const purchaseUnit = capture.purchase_units?.[0];
-        const payments = purchaseUnit?.payments;
-        const captured = payments?.captures?.[0];
-        const amountVal = captured?.amount?.value;
-        const currencyCode = captured?.amount?.currency_code;
-
-        await Appointment.findByIdAndUpdate(
-          appointmentId,
-          {
-            paymentStatus: 'PAID',
-            paymentProvider: 'PAYPAL',
-            paymentOrderId: orderId,
-            paymentAmount: amountVal ? Number(amountVal) : undefined,
-            paymentCurrency: currencyCode
-          },
-          { new: true }
-        );
-      } catch (apErr) {
-        console.error('Failed to update appointment with payment:', apErr);
-      }
+    if (endpointSecret) {
+      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } else {
+      // For development/testing without webhook verification
+      event = req.body;
     }
 
-    res.json(capture);
-  } catch (err) {
-    console.error('PayPal capture-order error:', err.response?.data || err.message);
-    res.status(500).json({ error: err.response?.data || err.message });
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        console.log('Payment succeeded:', event.data.object.id);
+        break;
+
+      case 'payment_intent.payment_failed':
+        console.log('Payment failed:', event.data.object.id);
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    res.json({ received: true });
+  } catch (error) {
+    console.error('Webhook error:', error.message);
+    res.status(400).send(`Webhook Error: ${error.message}`);
   }
 });
 

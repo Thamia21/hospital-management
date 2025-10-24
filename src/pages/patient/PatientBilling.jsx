@@ -40,6 +40,10 @@ import {
   Warning as WarningIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from "@stripe/stripe-js";
+import { stripePromise } from '../../config/stripe';
+import StripePaymentForm from '../../components/StripePaymentForm';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 
@@ -69,10 +73,7 @@ export default function PatientBilling() {
   const [selectedBill, setSelectedBill] = useState(null);
   const [paymentData, setPaymentData] = useState({
     amount: '',
-    paymentMethod: '',
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
+    paymentMethod: 'stripe', // Default to Stripe
     billingAddress: '',
   });
   const [processing, setProcessing] = useState(false);
@@ -119,26 +120,21 @@ export default function PatientBilling() {
     }
   };
 
-  const handlePayment = async () => {
+  const handlePayment = async (stripePaymentResult) => {
     try {
       setProcessing(true);
       setError('');
 
-      // Validate payment data
-      if (!paymentData.amount || !paymentData.paymentMethod) {
-        setError('Please fill in all required fields');
-        return;
-      }
-
-      // Create payment record
+      // Create payment record with Stripe payment details
       const paymentRecord = {
         patientId: user.uid,
         billId: selectedBill._id,
-        amount: parseFloat(paymentData.amount),
-        paymentMethod: paymentData.paymentMethod,
-        status: 'completed', // In real app, this would be 'pending' until confirmed
+        amount: parseFloat(stripePaymentResult.amount),
+        paymentMethod: 'stripe',
+        status: 'completed',
         createdAt: new Date(),
-        transactionId: `TXN-${Date.now()}`,
+        transactionId: stripePaymentResult.paymentIntentId,
+        currency: stripePaymentResult.currency,
       };
 
       await axios.post(
@@ -148,11 +144,11 @@ export default function PatientBilling() {
       );
 
       // Update bill status if fully paid
-      const remainingAmount = selectedBill.amount - parseFloat(paymentData.amount);
-      const billUpdate = remainingAmount <= 0 
+      const remainingAmount = selectedBill.amount - parseFloat(stripePaymentResult.amount);
+      const billUpdate = remainingAmount <= 0
         ? { status: 'paid', paidAt: new Date() }
         : { amount: remainingAmount };
-      
+
       await axios.put(
         `${API_URL}/bills/${selectedBill._id}`,
         billUpdate,
@@ -161,16 +157,13 @@ export default function PatientBilling() {
 
       // Refresh data
       await fetchBillingData();
-      
+
       // Close dialog and reset form
       setPaymentDialog(false);
       setSelectedBill(null);
       setPaymentData({
         amount: '',
-        paymentMethod: '',
-        cardNumber: '',
-        expiryDate: '',
-        cvv: '',
+        paymentMethod: 'stripe',
         billingAddress: '',
       });
 
@@ -419,7 +412,7 @@ export default function PatientBilling() {
       </Paper>
 
       {/* Payment Dialog */}
-      <Dialog open={paymentDialog} onClose={() => setPaymentDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={paymentDialog} onClose={() => setPaymentDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>Make Payment</DialogTitle>
         <DialogContent>
           {selectedBill && (
@@ -431,78 +424,19 @@ export default function PatientBilling() {
                 Service: {selectedBill.description || selectedBill.service || 'Medical Service'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Amount Due: ${selectedBill.amount?.toFixed(2)}
+                Amount Due: {formatCurrency(selectedBill.amount)}
               </Typography>
               <Divider sx={{ my: 2 }} />
             </Box>
           )}
 
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Payment Amount"
-                type="number"
-                value={paymentData.amount}
-                onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                required
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth required>
-                <InputLabel>Payment Method</InputLabel>
-                <Select
-                  value={paymentData.paymentMethod}
-                  onChange={(e) => setPaymentData({ ...paymentData, paymentMethod: e.target.value })}
-                >
-                  <MenuItem value="credit_card">Credit Card</MenuItem>
-                  <MenuItem value="debit_card">Debit Card</MenuItem>
-                  <MenuItem value="bank_transfer">Bank Transfer</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            {(paymentData.paymentMethod === 'credit_card' || paymentData.paymentMethod === 'debit_card') && (
-              <>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="Card Number"
-                    value={paymentData.cardNumber}
-                    onChange={(e) => setPaymentData({ ...paymentData, cardNumber: e.target.value })}
-                    placeholder="1234 5678 9012 3456"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="Expiry Date"
-                    value={paymentData.expiryDate}
-                    onChange={(e) => setPaymentData({ ...paymentData, expiryDate: e.target.value })}
-                    placeholder="MM/YY"
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    fullWidth
-                    label="CVV"
-                    value={paymentData.cvv}
-                    onChange={(e) => setPaymentData({ ...paymentData, cvv: e.target.value })}
-                    placeholder="123"
-                  />
-                </Grid>
-              </>
-            )}
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Billing Address"
-                multiline
-                rows={2}
-                value={paymentData.billingAddress}
-                onChange={(e) => setPaymentData({ ...paymentData, billingAddress: e.target.value })}
-              />
-            </Grid>
-          </Grid>
+          <StripePaymentForm
+            amount={selectedBill?.amount || 0}
+            billId={selectedBill?._id}
+            onSuccess={handlePayment}
+            onError={(error) => setError(error)}
+            onCancel={() => setPaymentDialog(false)}
+          />
 
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
@@ -512,14 +446,6 @@ export default function PatientBilling() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPaymentDialog(false)}>Cancel</Button>
-          <Button 
-            onClick={handlePayment} 
-            variant="contained" 
-            disabled={processing}
-            startIcon={processing ? <CircularProgress size={20} /> : <PaymentIcon />}
-          >
-            {processing ? 'Processing...' : 'Pay Now'}
-          </Button>
         </DialogActions>
       </Dialog>
     </Box>

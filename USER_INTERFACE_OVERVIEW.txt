@@ -1,0 +1,494 @@
+================================================================================
+                    HOSPITAL MANAGEMENT SYSTEM - USER INTERFACE OVERVIEW
+                              MediConnect Healthcare Platform
+================================================================================
+
+6.1 OVERVIEW OF USER INTERFACE
+===============================
+
+6.1.1 SYSTEM FUNCTIONALITY FROM USER PERSPECTIVE
+------------------------------------------------
+
+The MediConnect Hospital Management System provides a comprehensive web-based 
+platform designed specifically for South African healthcare facilities. The 
+system serves four distinct user roles, each with tailored interfaces:
+
+**PATIENT PORTAL**
+- Complete healthcare management dashboard
+- Appointment booking and management
+- Medical records viewing (read-only)
+- Prescription tracking and test results access
+- Billing and payment processing
+- Secure messaging with healthcare providers
+- Health summary and vital signs tracking
+- Multilingual support (11 South African official languages)
+
+**DOCTOR INTERFACE**
+- Professional medical dashboard with patient statistics
+- Appointment scheduling and management
+- Patient medical records creation and editing
+- Prescription writing and management
+- Leave request management and professional profile management
+- Secure communication with patients and staff
+
+**NURSE INTERFACE**
+- Patient care management dashboard
+- Medical records creation and updates
+- Appointment assistance and scheduling
+- Patient vital signs recording and medication administration tracking
+
+**ADMINISTRATOR INTERFACE**
+- System-wide management dashboard
+- User account management (patients, doctors, nurses)
+- Leave approval and management system
+- System settings, reports and analytics
+
+6.1.2 AUTHENTICATION AND SECURITY
+---------------------------------
+
+**LOGIN PROCESS:**
+Users access via modern login page with healthcare branding using User ID format:
+- Patients: PAT### (e.g., PAT001)
+- Doctors: DOC### (e.g., DOC001)  
+- Nurses: NUR### (e.g., NUR001)
+- Admins: ADM### (e.g., ADM001)
+
+Demo accounts available for testing each role with password visibility toggle
+and automatic role-based redirection after successful login.
+
+**SECURITY FEATURES:**
+- JWT token-based authentication
+- Role-based access control
+- Session management and secure password hashing
+- Email verification system
+- Automatic logout after inactivity
+
+6.1.3 MULTILINGUAL SUPPORT
+--------------------------
+
+Complete multilingual support for all 11 South African official languages:
+English, Afrikaans, isiZulu, isiXhosa, Sesotho, Setswana, siSwati, isiNdebele, 
+Xitsonga, Tshivenḓa, and Sepedi. Users can switch languages using the selector 
+in the top-right corner with preferences saved across sessions.
+
+================================================================================
+
+6.2 SCREEN IMAGES AND USER INTERFACES
+=====================================
+
+6.2.1 LOGIN PAGE
+---------------
+
+**VISUAL DESIGN:**
+Split-screen layout with branding on left, login form on right. Purple gradient 
+background with glass morphism effects and MediConnect Healthcare branding.
+
+**INTERFACE ELEMENTS:**
+- User ID input field with person icon
+- Password input field with lock icon and visibility toggle
+- Login button with loading spinner during authentication
+- Language selector in top-right corner
+- Demo account cards for easy testing
+
+**DEMO ACCOUNT CARDS:**
+[Patient Card]    [Nurse Card]      [Doctor Card]     [Admin Card]
+PAT001           NUR001            DOC001            ADM001
+patient123       nurse123          doctor123         admin123
+John Doe         Sister Mary       Dr. Smith         Admin User
+
+6.2.2 PATIENT PORTAL DASHBOARD
+-----------------------------
+
+**HEADER SECTION:**
+- MediConnect logo and branding
+- Welcome message with patient name
+- Language selector (chip format)
+- User profile dropdown with logout option
+- Notification bell with unread count
+
+**MAIN DASHBOARD LAYOUT:**
+┌─────────────────────────────────────────────────────────────┐
+│ Welcome Back, John Doe                    [Language] [🔔3] │
+├─────────────────────────────────────────────────────────────┤
+│ HEALTH SUMMARY CARDS (4-column grid):                      │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────┐ │
+│ │Appointments │ │Medications  │ │Test Results │ │Balance  │ │
+│ │     3       │ │     5       │ │     2       │ │ R1,250  │ │
+│ │   This Month│ │   Active    │ │   Pending   │ │Outstanding│
+│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────┘ │
+│                                                             │
+│ QUICK ACTIONS (3-column grid):                             │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐             │
+│ │Book         │ │View         │ │Check        │             │
+│ │Appointment  │ │Messages     │ │Test Results │             │
+│ └─────────────┘ └─────────────┘ └─────────────┘             │
+└─────────────────────────────────────────────────────────────┘
+
+**SIDEBAR NAVIGATION:**
+- Dashboard (home icon)
+- Book Appointment (calendar icon)
+- My Appointments (schedule icon)
+- Medical Records (folder icon)
+- Prescriptions (medication icon)
+- Test Results (lab icon)
+- Billing (payment icon)
+- Messages (chat icon)
+- Profile (person icon)
+- Settings (gear icon)
+- Logout (exit icon)
+
+6.2.3 APPOINTMENT BOOKING INTERFACE
+----------------------------------
+
+**BOOKING FORM LAYOUT:**
+┌─────────────────────────────────────────────────────────────┐
+│                    BOOK NEW APPOINTMENT                     │
+├─────────────────────────────────────────────────────────────┤
+│ STEP 1: SELECT DOCTOR                                       │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐             │
+│ │Dr. Smith    │ │Dr. Johnson  │ │Dr. Williams │             │
+│ │Cardiology   │ │Dermatology  │ │Pediatrics   │             │
+│ │⭐⭐⭐⭐⭐    │ │⭐⭐⭐⭐⭐    │ │⭐⭐⭐⭐⭐    │             │
+│ └─────────────┘ └─────────────┘ └─────────────┘             │
+│                                                             │
+│ STEP 2: SELECT DATE & TIME                                  │
+│ ┌─────────────────┐  ┌─────────────────────────────────────┐ │
+│ │   AUGUST 2024   │  │        AVAILABLE TIMES              │ │
+│ │ S M T W T F S   │  │ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐     │ │
+│ │     1 2 3       │  │ │09:00│ │10:30│ │14:00│ │15:30│     │ │
+│ │ 4 5 6 7 8 9 10  │  │ └─────┘ └─────┘ └─────┘ └─────┘     │ │
+│ │11 12 13 14 15   │  │ ┌─────┐ ┌─────┐                     │ │
+│ │16 17 18 19 20   │  │ │16:00│ │17:00│                     │ │
+│ │21 22 [25] 26    │  │ └─────┘ └─────┘                     │ │
+│ └─────────────────┘  └─────────────────────────────────────┘ │
+│                                                             │
+│ STEP 3: APPOINTMENT DETAILS                                 │
+│ Reason for Visit: [General Checkup                       ] │
+│ Additional Notes: [Optional notes...                     ] │
+│                                                             │
+│ ┌─────────────┐                           ┌─────────────┐   │
+│ │   CANCEL    │                           │BOOK APPOINTMENT│
+│ └─────────────┘                           └─────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+
+**USER FEEDBACK:**
+- Real-time doctor availability checking
+- Leave warnings if selected doctor is unavailable
+- Alternative doctor suggestions
+- Loading states during booking process
+- Success confirmation with appointment details
+- Email confirmation sent automatically
+
+6.2.4 DOCTOR DASHBOARD
+---------------------
+
+**PROFESSIONAL HEADER:**
+┌─────────────────────────────────────────────────────────────┐
+│ Dr. Michael Smith - Cardiology Department    [Profile] [🔔] │
+│ "Providing excellent cardiac care since 2010"              │
+└─────────────────────────────────────────────────────────────┘
+
+**STATISTICS CARDS:**
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│Today's      │ │This Week's  │ │Total        │ │Success      │
+│Appointments │ │Appointments │ │Patients     │ │Rate         │
+│     8       │ │     42      │ │   1,247     │ │   98.5%     │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+
+**TODAY'S SCHEDULE:**
+┌─────────────────────────────────────────────────────────────┐
+│                    TODAY'S APPOINTMENTS                     │
+├─────────────────────────────────────────────────────────────┤
+│ 09:00 AM │ John Doe (PAT001)        │ General Checkup      │
+│          │ [Update Status ▼] [Reschedule] [View Patient]  │
+├─────────────────────────────────────────────────────────────┤
+│ 10:30 AM │ Mary Johnson (PAT002)    │ Follow-up Visit     │
+│          │ [Update Status ▼] [Reschedule] [View Patient]  │
+└─────────────────────────────────────────────────────────────┘
+
+**DOCTOR SIDEBAR NAVIGATION:**
+- Dashboard (home icon)
+- My Patients (people icon)
+- Appointments (calendar icon)
+- Messages (chat icon)
+- Prescriptions (medication icon)
+- Medical Records (folder icon)
+- Consultations (stethoscope icon)
+- Reports (chart icon)
+- Profile (person icon)
+- Settings (gear icon)
+- Logout (exit icon)
+
+6.2.5 NURSE DASHBOARD
+--------------------
+
+**PROFESSIONAL HEADER:**
+┌─────────────────────────────────────────────────────────────┐
+│ Sister Mary Johnson - General Ward        [Profile] [🔔2]   │
+│ "Caring for patients with compassion and expertise"        │
+└─────────────────────────────────────────────────────────────┘
+
+**NURSING STATISTICS CARDS:**
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│Patients     │ │Medications  │ │Vital Signs  │ │Tasks        │
+│Assigned     │ │Administered │ │Recorded     │ │Completed    │
+│     15      │ │     28      │ │     45      │ │   12/15     │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+
+**PATIENT CARE OVERVIEW:**
+┌─────────────────────────────────────────────────────────────┐
+│                    ASSIGNED PATIENTS                       │
+├─────────────────────────────────────────────────────────────┤
+│ Room 101 │ John Doe (PAT001)        │ Post-Op Recovery    │
+│          │ [Vitals] [Medication] [Notes] [View Chart]     │
+├─────────────────────────────────────────────────────────────┤
+│ Room 102 │ Mary Johnson (PAT002)    │ Observation        │
+│          │ [Vitals] [Medication] [Notes] [View Chart]     │
+├─────────────────────────────────────────────────────────────┤
+│ Room 103 │ David Wilson (PAT003)    │ Pre-Surgery Prep   │
+│          │ [Vitals] [Medication] [Notes] [View Chart]     │
+└─────────────────────────────────────────────────────────────┘
+
+**NURSING TASKS PANEL:**
+┌─────────────────────────────────────────────────────────────┐
+│                      TODAY'S TASKS                         │
+├─────────────────────────────────────────────────────────────┤
+│ ✅ 08:00 │ Medication round - Ward A                      │
+│ ✅ 09:30 │ Vital signs check - All patients              │
+│ ⏰ 11:00 │ Wound dressing - Room 105                     │
+│ ⏰ 14:00 │ Post-op assessment - Room 101                 │
+│ ⏰ 16:00 │ Evening medication round                      │
+└─────────────────────────────────────────────────────────────┘
+
+**NURSE SIDEBAR NAVIGATION:**
+- Dashboard (home icon)
+- My Patients (people icon)
+- Appointments (calendar icon)
+- Medical Records (folder icon)
+- Medications (pill icon)
+- Vital Signs (heart icon)
+- Tasks (checklist icon)
+- Messages (chat icon)
+- Profile (person icon)
+- Settings (gear icon)
+- Logout (exit icon)
+
+6.2.6 ADMINISTRATOR DASHBOARD
+----------------------------
+
+**ADMINISTRATIVE HEADER:**
+┌─────────────────────────────────────────────────────────────┐
+│ Admin User - System Administrator        [Profile] [🔔5]    │
+│ "Managing healthcare operations efficiently"               │
+└─────────────────────────────────────────────────────────────┘
+
+**SYSTEM OVERVIEW CARDS:**
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│Total Users  │ │Active       │ │Appointments │ │System       │
+│             │ │Sessions     │ │Today        │ │Status       │
+│    1,247    │ │     89      │ │    156      │ │  ✅ Online  │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│Pending      │ │Revenue      │ │Staff On     │ │Bed          │
+│Leave        │ │This Month   │ │Leave        │ │Occupancy    │
+│Requests     │ │ R125,450    │ │     8       │ │    78%      │
+└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
+
+**USER MANAGEMENT PANEL:**
+┌─────────────────────────────────────────────────────────────┐
+│                    USER MANAGEMENT                         │
+├─────────────────────────────────────────────────────────────┤
+│ Recent Registrations:                                       │
+│ • Dr. Sarah Williams (Pediatrics) - Pending Approval       │
+│ • Nurse Tom Brown (ICU) - Approved                         │
+│ • Patient Alice Cooper - Active                            │
+│                                                             │
+│ [View All Users] [Approve Pending] [Generate Report]       │
+└─────────────────────────────────────────────────────────────┘
+
+**LEAVE MANAGEMENT PANEL:**
+┌─────────────────────────────────────────────────────────────┐
+│                   LEAVE REQUESTS                           │
+├─────────────────────────────────────────────────────────────┤
+│ PENDING APPROVAL:                                           │
+│ • Dr. Michael Smith - Annual Leave (Aug 15-22)             │
+│   [Approve] [Reject] [View Details]                        │
+│ • Sister Mary Johnson - Sick Leave (Aug 20)                │
+│   [Approve] [Reject] [View Details]                        │
+│                                                             │
+│ APPROVED THIS WEEK: 3 | REJECTED: 0                        │
+└─────────────────────────────────────────────────────────────┘
+
+**SYSTEM ANALYTICS:**
+┌─────────────────────────────────────────────────────────────┐
+│                    SYSTEM REPORTS                          │
+├─────────────────────────────────────────────────────────────┤
+│ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐ │
+│ │ Daily Activity  │ │ Revenue Trends  │ │ Staff Utilization│ │
+│ │     Chart       │ │     Chart       │ │     Chart       │ │
+│ │                 │ │                 │ │                 │ │
+│ │   [View Full]   │ │   [View Full]   │ │   [View Full]   │ │
+│ └─────────────────┘ └─────────────────┘ └─────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+
+**ADMIN SIDEBAR NAVIGATION:**
+- Dashboard (home icon)
+- User Management (people icon)
+- Leave Management (calendar icon)
+- Appointments (schedule icon)
+- Patients (patient icon)
+- Medical Records (folder icon)
+- Reports & Analytics (chart icon)
+- System Settings (settings icon)
+- Billing Management (payment icon)
+- Messages (chat icon)
+- Profile (person icon)
+- Logout (exit icon)
+
+================================================================================
+
+6.3 SCREEN OBJECTS AND ACTIONS
+==============================
+
+6.3.1 NAVIGATION OBJECTS
+------------------------
+
+**PRIMARY NAVIGATION (SIDEBAR):**
+Object: Sidebar Menu
+Actions: 
+- Click menu items to navigate between sections
+- Hover for tooltips with section descriptions
+- Collapse/expand on mobile devices
+- Visual highlighting of current page
+
+**HEADER NAVIGATION:**
+Object: Top Header Bar
+Actions:
+- Click logo to return to dashboard
+- Click profile dropdown for user options
+- Click notification bell to view alerts
+- Click language selector to change language
+
+6.3.2 FORM OBJECTS AND ACTIONS
+------------------------------
+
+**INPUT FIELDS:**
+Object: Text Input Fields
+Actions:
+- Click to focus and enter text
+- Tab navigation between fields
+- Real-time validation feedback
+- Clear button to empty field
+
+**DROPDOWN SELECTORS:**
+Object: Select Dropdown Menus
+Actions:
+- Click to open options list
+- Type to search/filter options
+- Select option to close dropdown
+- Multi-select capability where needed
+
+**DATE/TIME PICKERS:**
+Object: Calendar and Time Selection
+Actions:
+- Click to open calendar popup
+- Navigate months with arrow buttons
+- Click date to select
+- Time picker with hour/minute selection
+
+**BUTTON OBJECTS:**
+Object: Action Buttons
+Actions:
+- Primary buttons (colored) for main actions
+- Secondary buttons (outlined) for alternatives
+- Loading states during processing
+- Disabled states for invalid actions
+
+6.3.3 DATA DISPLAY OBJECTS
+--------------------------
+
+**CARDS AND PANELS:**
+Object: Information Cards
+Actions:
+- Click to expand/view details
+- Hover for additional information
+- Action buttons within cards
+- Status indicators and badges
+
+**TABLES AND LISTS:**
+Object: Data Tables
+Actions:
+- Sort columns by clicking headers
+- Filter data using search boxes
+- Paginate through large datasets
+- Select rows for batch actions
+
+**CHARTS AND GRAPHS:**
+Object: Data Visualizations
+Actions:
+- Hover for detailed data points
+- Click legend items to toggle series
+- Zoom and pan capabilities
+- Export chart as image
+
+6.3.4 INTERACTIVE ELEMENTS
+--------------------------
+
+**MODAL DIALOGS:**
+Object: Popup Windows
+Actions:
+- Click overlay to close
+- Use escape key to dismiss
+- Form submission within modals
+- Confirmation dialogs for destructive actions
+
+**NOTIFICATIONS:**
+Object: Alert Messages
+Actions:
+- Auto-dismiss after timeout
+- Click X to manually dismiss
+- Action buttons within notifications
+- Different types (success, warning, error)
+
+**SEARCH AND FILTERS:**
+Object: Search Components
+Actions:
+- Type to search in real-time
+- Apply multiple filters
+- Clear all filters option
+- Save search preferences
+
+================================================================================
+
+SYSTEM FEEDBACK AND USER EXPERIENCE
+===================================
+
+**LOADING STATES:**
+- Spinner animations during data loading
+- Skeleton screens for content placeholders
+- Progress bars for long operations
+- Disabled states for unavailable actions
+
+**ERROR HANDLING:**
+- Clear error messages with suggested actions
+- Form validation with field-specific feedback
+- Graceful degradation for system failures
+- Retry mechanisms for failed operations
+
+**SUCCESS CONFIRMATIONS:**
+- Toast notifications for completed actions
+- Email confirmations for important operations
+- Visual feedback for state changes
+- Undo options where appropriate
+
+**ACCESSIBILITY FEATURES:**
+- Keyboard navigation support
+- Screen reader compatibility
+- High contrast mode option
+- Adjustable font sizes
+- Focus indicators and ARIA labels
+
+The system provides comprehensive feedback to users through visual cues, 
+notifications, and confirmations, ensuring a professional healthcare 
+management experience across all user roles and device types.

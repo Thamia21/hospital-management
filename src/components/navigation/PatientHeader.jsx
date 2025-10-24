@@ -40,7 +40,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useNotifications } from '../../context/NotificationContext';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -52,10 +52,9 @@ const getAuthHeader = () => {
 const PatientHeader = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead: markNotificationAsRead, markAllAsRead: markAllNotificationsAsRead, isConnected } = useNotifications();
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -84,129 +83,17 @@ const PatientHeader = () => {
     setNotificationAnchorEl(null);
   };
 
-  const markAsRead = async (notificationId) => {
+  const markAsReadHandler = async (notificationId) => {
     if (!user?.uid) return;
-    
-    try {
-      // Try to mark as read via API
-      await axios.put(
-        `${API_URL}/patients/${user.uid}/notifications/${notificationId}/read`,
-        {},
-        { headers: getAuthHeader() }
-      );
-    } catch (error) {
-      // If API doesn't exist, just update locally
-      console.log('Notification API not implemented, updating locally');
-    }
-    
-    // Update local state
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
-          ? { ...notif, read: true }
-          : notif
-      )
-    );
-    updateUnreadCount();
+
+    await markNotificationAsRead(notificationId);
   };
 
-  const markAllAsRead = async () => {
+  const markAllAsReadHandler = async () => {
     if (!user?.uid) return;
-    
-    try {
-      await axios.put(
-        `${API_URL}/patients/${user.uid}/notifications/read-all`,
-        {},
-        { headers: getAuthHeader() }
-      );
-    } catch (error) {
-      console.log('Notification API not implemented, updating locally');
-    }
-    
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
-    setUnreadCount(0);
+
+    await markAllNotificationsAsRead();
   };
-
-  const updateUnreadCount = () => {
-    const count = notifications.filter(notif => !notif.read).length;
-    setUnreadCount(count);
-  };
-
-  const fetchNotifications = async () => {
-    if (!user?.uid) return;
-    
-    try {
-      const response = await axios.get(
-        `${API_URL}/patients/${user.uid}/notifications`,
-        { headers: getAuthHeader() }
-      );
-      setNotifications(response.data || []);
-    } catch (error) {
-      // If API doesn't exist, use mock data
-      if (error.response?.status === 404) {
-        const mockNotifications = [
-          {
-            id: '1',
-            type: 'appointment',
-            title: 'Upcoming Appointment',
-            message: 'You have an appointment with Dr. Smith tomorrow at 10:00 AM',
-            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-            read: false,
-            priority: 'high'
-          },
-          {
-            id: '2',
-            type: 'test_result',
-            title: 'Test Results Available',
-            message: 'Your blood test results are now available for review',
-            timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-            read: false,
-            priority: 'medium'
-          },
-          {
-            id: '3',
-            type: 'billing',
-            title: 'Payment Reminder',
-            message: 'Your outstanding balance of R 450.00 is due in 3 days',
-            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            read: true,
-            priority: 'medium'
-          },
-          {
-            id: '4',
-            type: 'medication',
-            title: 'Medication Reminder',
-            message: 'Time to take your prescribed medication',
-            timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-            read: false,
-            priority: 'high'
-          },
-          {
-            id: '5',
-            type: 'message',
-            title: 'New Message',
-            message: 'Dr. Johnson sent you a message about your treatment plan',
-            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-            read: true,
-            priority: 'low'
-          }
-        ];
-        setNotifications(mockNotifications);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (user?.uid) {
-      fetchNotifications();
-    }
-  }, [user?.uid]);
-
-  useEffect(() => {
-    updateUnreadCount();
-  }, [notifications]);
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -345,10 +232,19 @@ const PatientHeader = () => {
             <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
                 <Typography variant="h6">Notifications</Typography>
+                {isConnected && (
+                  <Chip 
+                    label="Live" 
+                    size="small" 
+                    color="success" 
+                    variant="outlined" 
+                    sx={{ height: 20, fontSize: '0.7rem' }}
+                  />
+                )}
                 {unreadCount > 0 && (
                   <Button 
                     size="small" 
-                    onClick={markAllAsRead}
+                    onClick={markAllAsReadHandler}
                     sx={{ textTransform: 'none' }}
                   >
                     Mark all as read
@@ -368,7 +264,7 @@ const PatientHeader = () => {
                 {notifications.map((notification, index) => (
                   <React.Fragment key={notification._id || notification.id || index}>
                     <ListItemButton
-                      onClick={() => markAsRead(notification._id || notification.id)}
+                      onClick={() => markAsReadHandler(notification._id || notification.id)}
                       sx={{
                         backgroundColor: notification.read ? 'transparent' : 'action.hover',
                         '&:hover': {

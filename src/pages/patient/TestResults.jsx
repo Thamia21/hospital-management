@@ -42,6 +42,8 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -103,6 +105,42 @@ export default function TestResults() {
   const openDetailDialog = (result) => {
     setSelectedResult(result);
     setDetailDialog(true);
+  };
+
+  const handleDownload = (result) => {
+    if (!result) return;
+
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(20);
+    doc.text('Test Result Report', 14, 22);
+
+    // Patient and Test Info
+    autoTable(doc, {
+      startY: 30,
+      head: [['Patient Name', 'Test Name', 'Test Date']],
+      body: [[user?.name || 'N/A', result.testName, new Date(result.testDate).toLocaleDateString()]],
+      theme: 'striped',
+    });
+
+    // Test Parameters
+    if (result.results && result.results.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Parameter', 'Value', 'Unit', 'Reference Range']],
+        body: result.results.map(p => [p.parameter, p.value, p.unit, p.referenceRange]),
+        theme: 'grid',
+      });
+    }
+
+    // Interpretation
+    if (result.interpretation) {
+      doc.text('Interpretation:', 14, doc.lastAutoTable.finalY + 15);
+      doc.text(result.interpretation, 14, doc.lastAutoTable.finalY + 22, { maxWidth: 180 });
+    }
+
+    doc.save(`test-result-${result._id}.pdf`);
   };
 
   const filteredResults = testResults.filter(result => {
@@ -241,7 +279,7 @@ export default function TestResults() {
             </TableHead>
             <TableBody>
               {filteredResults.map((result) => (
-                <TableRow key={result.id}>
+                <TableRow key={result._id}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       {getResultIcon(result.status, result.isAbnormal)}
@@ -256,8 +294,7 @@ export default function TestResults() {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    {result.testDate?.toDate?.()?.toLocaleDateString() || 
-                     result.createdAt?.toDate?.()?.toLocaleDateString()}
+                    {result.testDate ? new Date(result.testDate).toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell>
                     <Chip 
@@ -284,21 +321,26 @@ export default function TestResults() {
                   <TableCell>
                     <Stack direction="row" spacing={1}>
                       <Tooltip title="View Details">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => openDetailDialog(result)}
-                          disabled={result.status !== 'completed'}
-                        >
-                          <ViewIcon />
-                        </IconButton>
+                        <span>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => openDetailDialog(result)}
+                            disabled={!['completed', 'reviewed'].includes(result.status?.toLowerCase())}
+                          >
+                            <ViewIcon />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                       <Tooltip title="Download Report">
-                        <IconButton 
-                          size="small"
-                          disabled={result.status !== 'completed'}
-                        >
-                          <DownloadIcon />
-                        </IconButton>
+                        <span>
+                          <IconButton 
+                            size="small"
+                            onClick={() => handleDownload(result)}
+                            disabled={!['completed', 'reviewed'].includes(result.status?.toLowerCase())}
+                          >
+                            <DownloadIcon />
+                          </IconButton>
+                        </span>
                       </Tooltip>
                     </Stack>
                   </TableCell>
@@ -348,7 +390,7 @@ export default function TestResults() {
                     Test Date
                   </Typography>
                   <Typography variant="body1">
-                    {selectedResult.testDate?.toDate?.()?.toLocaleDateString()}
+                    {selectedResult.testDate ? new Date(selectedResult.testDate).toLocaleDateString() : 'N/A'}
                   </Typography>
                 </Grid>
                 <Grid item xs={12} md={6}>

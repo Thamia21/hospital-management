@@ -54,9 +54,7 @@ const DoctorPatients = () => {
       // Filter to only patients
       const patientsData = users.filter(u => u.role === 'PATIENT').map(patient => ({
         id: patient._id || patient.id,
-        name: patient.firstName && patient.lastName 
-          ? `${patient.firstName} ${patient.lastName}`
-          : patient.email,
+        name: patient.name || patient.email,
         email: patient.email || 'No email',
         phone: patient.phone || patient.phoneNumber || 'No phone',
         lastVisit: patient.lastVisit || 'No previous visits',
@@ -199,7 +197,7 @@ const DoctorPatients = () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Medical Records">
-                        <IconButton>
+                        <IconButton onClick={() => navigate(`/patient/${patient.id}/medical-records`)}>
                           <MedicalServicesIcon />
                         </IconButton>
                       </Tooltip>

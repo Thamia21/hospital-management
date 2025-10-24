@@ -6,6 +6,11 @@ const Bill = require('../models/Bill');
 const Notification = require('../models/Notification');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
+const MedicalRecord = require('../models/MedicalRecord');
+const TestResult = require('../models/TestResult');
+const Vital = require('../models/Vital');
+const Condition = require('../models/Condition');
+const Allergy = require('../models/Allergy');
 const auth = require('../middleware/auth');
 
 // GET /api/patients/stats - Get patient statistics for admin dashboard
@@ -394,21 +399,41 @@ router.get('/:patientId/notifications', verifyPatientAccess, async (req, res) =>
 router.put('/:patientId/notifications/:notificationId/read', verifyPatientAccess, async (req, res) => {
   try {
     const { patientId, notificationId } = req.params;
-    
+
     const notification = await Notification.findOneAndUpdate(
       { _id: notificationId, userId: patientId },
       { read: true },
       { new: true }
     );
-    
+
     if (!notification) {
       return res.status(404).json({ message: 'Notification not found' });
     }
-    
+
     res.json(notification);
   } catch (error) {
     console.error('Error marking notification as read:', error);
     res.status(500).json({ message: 'Failed to update notification', error: error.message });
+  }
+});
+
+// PUT /api/patients/:patientId/notifications/read-all
+router.put('/:patientId/notifications/read-all', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    const result = await Notification.updateMany(
+      { userId: patientId, read: false },
+      { read: true }
+    );
+
+    res.json({
+      message: 'All notifications marked as read',
+      modifiedCount: result.modifiedCount
+    });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    res.status(500).json({ message: 'Failed to mark notifications as read', error: error.message });
   }
 });
 
@@ -439,6 +464,262 @@ router.get('/:patientId/dashboard-summary', verifyPatientAccess, async (req, res
   } catch (error) {
     console.error('Error fetching dashboard summary:', error);
     res.status(500).json({ message: 'Failed to fetch dashboard summary', error: error.message });
+  }
+});
+
+// GET /api/patients/:patientId/medical-records - Patient access to their own medical records
+router.get('/:patientId/medical-records', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    console.log('Fetching medical records for patient:', patientId);
+
+    let records = await MedicalRecord.find({ patientId }).sort({ recordDate: -1 });
+    console.log('Found existing records:', records.length);
+
+    if (records.length === 0) {
+      console.log('No records found, creating sample records...');
+      // Create sample records if none exist for this patient
+      const sampleRecords = [
+        {
+          patientId,
+          recordType: 'diagnosis',
+          recordDate: new Date('2023-01-15T10:00:00Z'),
+          diagnosis: 'Hypertension',
+          description: 'Patient presented with consistently high blood pressure readings. Advised on lifestyle changes and monitoring.',
+          doctorName: 'Dr. Emily Carter',
+          facility: 'General Hospital',
+        },
+        {
+          patientId,
+          recordType: 'lab_result',
+          recordDate: new Date('2023-02-20T14:30:00Z'),
+          diagnosis: 'Lipid Panel',
+          description: 'Total Cholesterol: 240 mg/dL (High), LDL: 160 mg/dL (High). Results indicate hyperlipidemia.',
+          doctorName: 'Dr. John Doe',
+          facility: 'City Clinic Labs',
+        },
+        {
+          patientId,
+          recordType: 'treatment',
+          recordDate: new Date('2023-03-10T11:00:00Z'),
+          diagnosis: 'Hypertension Management',
+          description: 'Initiated treatment for hypertension based on recent diagnosis and lab results.',
+          treatment: 'Prescribed Lisinopril 10mg once daily. Follow-up in 3 months.',
+          doctorName: 'Dr. Emily Carter',
+          facility: 'General Hospital',
+        },
+        {
+          patientId,
+          recordType: 'consultation',
+          recordDate: new Date('2023-05-25T09:00:00Z'),
+          diagnosis: 'Annual Physical Exam',
+          description: 'Routine check-up. Patient reports feeling well. Discussed diet and exercise.',
+          notes: 'All vitals are stable. Continue current treatment plan.',
+          doctorName: 'Dr. Emily Carter',
+          facility: 'General Hospital',
+        },
+      ];
+
+      try {
+        await MedicalRecord.insertMany(sampleRecords);
+        console.log('Sample records created successfully');
+        records = await MedicalRecord.find({ patientId }).sort({ recordDate: -1 });
+        console.log('Records after creation:', records.length);
+      } catch (insertError) {
+        console.error('Error creating sample records:', insertError);
+        // Return empty array if sample creation fails
+        records = [];
+      }
+    }
+
+    res.json(records);
+  } catch (error) {
+    console.error('Error fetching medical records:', error);
+    res.status(500).json({ message: 'Failed to fetch medical records', error: error.message });
+  }
+});
+
+// GET /api/patients/:patientId/prescriptions
+router.get('/:patientId/prescriptions', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    let prescriptions = await Prescription.find({ patientId }).sort({ createdAt: -1 });
+
+    if (prescriptions.length === 0) {
+      // Create a sample prescription if none exist
+      const samplePrescription = {
+        patientId,
+        medication: 'Lisinopril',
+        dosage: '10mg',
+        frequency: 'Once daily',
+        duration: '3 months',
+        notes: 'Take with food. Monitor blood pressure regularly.',
+        doctorName: 'Dr. Emily Carter',
+        createdAt: new Date('2023-03-10T11:00:00Z'),
+      };
+      await Prescription.create(samplePrescription);
+      prescriptions = await Prescription.find({ patientId }).sort({ createdAt: -1 });
+    }
+
+    res.json(prescriptions);
+  } catch (error) {
+    console.error('Error fetching prescriptions:', error);
+    res.status(500).json({ message: 'Failed to fetch prescriptions', error: error.message });
+  }
+});
+
+// GET /api/patients/:patientId/test-results
+router.get('/:patientId/test-results', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    let testResults = await TestResult.find({ patientId }).sort({ testDate: -1 });
+
+    if (testResults.length === 0) {
+      // Create sample test results if none exist
+      const sampleTestResults = [
+        {
+          patientId,
+          testName: 'Complete Blood Count (CBC)',
+          testDate: new Date('2023-02-20T14:00:00Z'),
+          status: 'Reviewed',
+          orderedBy: 'Dr. John Doe',
+          facility: 'City Clinic Labs',
+          results: [
+            { parameter: 'Hemoglobin', value: '14.5', unit: 'g/dL', referenceRange: '13.5-17.5' },
+            { parameter: 'White Blood Cell Count', value: '7.2', unit: 'x10^9/L', referenceRange: '4.5-11.0' },
+          ],
+          interpretation: 'All values within normal range.',
+        },
+        {
+          patientId,
+          testName: 'Lipid Panel',
+          testDate: new Date('2023-02-20T14:30:00Z'),
+          status: 'Completed',
+          orderedBy: 'Dr. Emily Carter',
+          facility: 'General Hospital Labs',
+          results: [
+            { parameter: 'Total Cholesterol', value: '240', unit: 'mg/dL', referenceRange: '<200' },
+            { parameter: 'LDL Cholesterol', value: '160', unit: 'mg/dL', referenceRange: '<100' },
+            { parameter: 'HDL Cholesterol', value: '50', unit: 'mg/dL', referenceRange: '>40' },
+          ],
+          interpretation: 'High total and LDL cholesterol. Indicates hyperlipidemia.',
+        },
+      ];
+      await TestResult.insertMany(sampleTestResults);
+      testResults = await TestResult.find({ patientId }).sort({ testDate: -1 });
+    }
+
+    res.json(testResults);
+  } catch (error) {
+    console.error('Error fetching test results:', error);
+    res.status(500).json({ message: 'Failed to fetch test results', error: error.message });
+  }
+});
+
+// GET /api/patients/:patientId/vitals
+router.get('/:patientId/vitals', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    let vitals = await Vital.find({ patientId }).sort({ measurementDate: -1 }).limit(limit);
+
+    if (vitals.length === 0) {
+      // Create sample vitals if none exist
+      const sampleVitals = [
+        {
+          patientId,
+          measurementDate: new Date('2023-01-15T09:00:00Z'),
+          bloodPressure: { systolic: 120, diastolic: 80 },
+          heartRate: 72,
+          temperature: 36.8,
+          oxygenSaturation: 98,
+          recordedBy: 'Nurse Jane Doe',
+        },
+        {
+          patientId,
+          measurementDate: new Date('2023-02-20T10:00:00Z'),
+          bloodPressure: { systolic: 125, diastolic: 82 },
+          heartRate: 75,
+          temperature: 37.0,
+          oxygenSaturation: 97,
+          recordedBy: 'Nurse Jane Doe',
+        },
+      ];
+      await Vital.insertMany(sampleVitals);
+      vitals = await Vital.find({ patientId }).sort({ measurementDate: -1 }).limit(limit);
+    }
+
+    res.json(vitals);
+  } catch (error) {
+    console.error('Error fetching vitals:', error);
+    res.status(500).json({ message: 'Failed to fetch vitals', error: error.message });
+  }
+});
+
+// GET /api/patients/:patientId/conditions
+router.get('/:patientId/conditions', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { status } = req.query;
+    const query = { patientId };
+    if (status) {
+      query.status = status;
+    }
+
+    let conditions = await Condition.find(query).sort({ onsetDate: -1 });
+
+    if (conditions.length === 0 && !status) {
+      // Create sample conditions if none exist
+      const sampleConditions = [
+        {
+          patientId,
+          conditionName: 'Hypertension',
+          status: 'active',
+          onsetDate: new Date('2023-01-15T00:00:00Z'),
+          recordedBy: 'Dr. Emily Carter',
+        },
+        {
+          patientId,
+          conditionName: 'Type 2 Diabetes',
+          status: 'chronic',
+          onsetDate: new Date('2022-05-20T00:00:00Z'),
+          recordedBy: 'Dr. John Doe',
+        },
+      ];
+      await Condition.insertMany(sampleConditions);
+      conditions = await Condition.find(query).sort({ onsetDate: -1 });
+    }
+
+    res.json(conditions);
+  } catch (error) {
+    console.error('Error fetching conditions:', error);
+    res.status(500).json({ message: 'Failed to fetch conditions', error: error.message });
+  }
+});
+
+// GET /api/patients/:patientId/allergies
+router.get('/:patientId/allergies', verifyPatientAccess, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    let allergies = await Allergy.find({ patientId });
+
+    if (allergies.length === 0) {
+      // Create a sample allergy if none exist
+      const sampleAllergy = {
+        patientId,
+        allergen: 'Peanuts',
+        reaction: 'Anaphylaxis',
+        severity: 'severe',
+        recordedBy: 'Dr. Emily Carter',
+      };
+      await Allergy.create(sampleAllergy);
+      allergies = await Allergy.find({ patientId });
+    }
+
+    res.json(allergies);
+  } catch (error) {
+    console.error('Error fetching allergies:', error);
+    res.status(500).json({ message: 'Failed to fetch allergies', error: error.message });
   }
 });
 

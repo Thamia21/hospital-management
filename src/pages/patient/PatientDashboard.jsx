@@ -374,37 +374,41 @@ export default function PatientDashboard() {
             </Typography>
             <Divider sx={{ mb: 2 }} />
             {dashboardData.upcomingAppointments.length > 0 ? (
-              <List>
-                {dashboardData.upcomingAppointments.map((appointment, index) => (
-                  <ListItem key={appointment._id || appointment.id || index} divider>
-                    <ListItemIcon>
-                      <Schedule color="primary" />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`Dr. ${appointment.doctorName || 'TBD'}`}
-                      secondary={`${new Date(appointment.date).toLocaleDateString()} at ${appointment.time || 'TBD'}`}
-                    />
-                    <Chip 
-                      label={appointment.status} 
-                      color="primary" 
-                      size="small" 
-                    />
-                  </ListItem>
-                ))}
-              </List>
+              <Box sx={{ maxHeight: '300px', overflowY: 'auto' }}>
+                <List>
+                  {dashboardData.upcomingAppointments.slice(0, 5).map((appointment, index) => (
+                    <ListItem key={appointment._id || appointment.id || index} divider>
+                      <ListItemIcon>
+                        <Schedule color="primary" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={`Dr. ${appointment.doctorName || 'TBD'}`}
+                        secondary={`${new Date(appointment.date).toLocaleDateString()} at ${appointment.time || 'TBD'}`}
+                      />
+                      <Chip
+                        label={appointment.status}
+                        color="primary"
+                        size="small"
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
             ) : (
               <Typography color="text.secondary" sx={{ textAlign: 'center', py: 3 }}>
                 {t('dashboard.noUpcomingAppointments', 'No upcoming appointments')}
               </Typography>
             )}
-            <Button 
-              fullWidth 
-              variant="outlined" 
-              sx={{ mt: 2 }}
-              onClick={() => navigate('/appointments')}
-            >
-              {t('dashboard.viewAllAppointments', 'View All Appointments')}
-            </Button>
+            {dashboardData.upcomingAppointments.length > 5 && (
+              <Button
+                fullWidth
+                variant="outlined"
+                sx={{ mt: 2 }}
+                onClick={() => navigate('/appointments')}
+              >
+                {t('dashboard.viewAllAppointments', 'View All Appointments')}
+              </Button>
+            )}
           </Paper>
         </Grid>
 

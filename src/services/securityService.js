@@ -6,7 +6,19 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from 'firebase/auth';
-import { doc, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import {
+  serverTimestamp,
+  addDoc,
+  collection,
+  doc,
+  updateDoc,
+  getDoc,
+  query,
+  where,
+  orderBy,
+  getDocs
+} from 'firebase/firestore';
+import { db, auth } from '../firebase';
 
 // Security levels for different roles
 export const SECURITY_LEVELS = {

@@ -157,61 +157,32 @@ export default function HealthSummary() {
     }
   };
 
-  const getVitalStatus = (type, value) => {
-    // Simple vital sign ranges (in a real app, these would be more sophisticated)
-    const ranges = {
-      'blood_pressure_systolic': { normal: [90, 120], warning: [120, 140], critical: [140, 180] },
-      'blood_pressure_diastolic': { normal: [60, 80], warning: [80, 90], critical: [90, 120] },
-      'heart_rate': { normal: [60, 100], warning: [50, 120], critical: [40, 150] },
-      'temperature': { normal: [97, 99], warning: [99, 101], critical: [101, 104] },
-      'weight': { normal: [100, 250], warning: [250, 300], critical: [300, 400] },
-    };
-
-    const range = ranges[type];
-    if (!range) return 'normal';
-
-    if (value >= range.normal[0] && value <= range.normal[1]) return 'normal';
-    if (value >= range.warning[0] && value <= range.warning[1]) return 'warning';
-    return 'critical';
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'normal': return 'success';
-      case 'warning': return 'warning';
-      case 'critical': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const VitalCard = ({ vital, trend }) => {
-    const status = getVitalStatus(vital.type, vital.value);
+  const VitalCard = ({ name, value, unit, date }) => {
+    // A simplified card, as status logic is complex with the new model
     return (
       <Card sx={{ height: '100%' }}>
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="h6" component="div">
-              {vital.type.replace('_', ' ').toUpperCase()}
-            </Typography>
-            {trend === 'up' ? <TrendingUp color="success" /> : 
-             trend === 'down' ? <TrendingDown color="error" /> : null}
-          </Box>
-          <Typography variant="h4" color={getStatusColor(status) + '.main'}>
-            {vital.value} {vital.unit}
+          <Typography variant="h6" component="div" sx={{ textTransform: 'capitalize' }}>
+            {name.replace('_', ' ')}
+          </Typography>
+          <Typography variant="h4" color="primary.main">
+            {value} {unit}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {vital.recordedAt?.toDate?.()?.toLocaleDateString()}
+            {new Date(date).toLocaleDateString()}
           </Typography>
-          <Chip 
-            label={status.toUpperCase()} 
-            color={getStatusColor(status)} 
-            size="small" 
-            sx={{ mt: 1 }}
-          />
         </CardContent>
       </Card>
     );
   };
+
+  const latestVitals = healthData.vitals[0] || {};
+  const vitalCards = latestVitals ? [
+    { name: 'Blood Pressure', value: `${latestVitals.bloodPressure?.systolic || 'N/A'}/${latestVitals.bloodPressure?.diastolic || 'N/A'}`, unit: 'mmHg', date: latestVitals.measurementDate },
+    { name: 'Heart Rate', value: latestVitals.heartRate, unit: 'bpm', date: latestVitals.measurementDate },
+    { name: 'Temperature', value: latestVitals.temperature, unit: '°C', date: latestVitals.measurementDate },
+    { name: 'Oxygen Saturation', value: latestVitals.oxygenSaturation, unit: '%', date: latestVitals.measurementDate },
+  ].filter(v => v.value !== null && v.value !== undefined && v.value !== 'N/A' && !v.value.toString().includes('N/A')) : [];
 
   if (loading) {
     return (
@@ -257,11 +228,11 @@ export default function HealthSummary() {
           </Button>
         </Box>
         
-        {healthData.vitals.length > 0 ? (
+        {vitalCards.length > 0 ? (
           <Grid container spacing={2}>
-            {healthData.vitals.slice(0, 4).map((vital, index) => (
-              <Grid item xs={12} sm={6} md={3} key={vital.id}>
-                <VitalCard vital={vital} trend={index === 0 ? 'stable' : null} />
+            {vitalCards.map((vital) => (
+              <Grid item xs={12} sm={6} md={3} key={vital.name}>
+                <VitalCard {...vital} />
               </Grid>
             ))}
           </Grid>
@@ -284,13 +255,13 @@ export default function HealthSummary() {
             {healthData.conditions.length > 0 ? (
               <List>
                 {healthData.conditions.map((condition) => (
-                  <ListItem key={condition.id} divider>
+                  <ListItem key={condition._id} divider>
                     <ListItemIcon>
                       <WarningIcon color="warning" />
                     </ListItemIcon>
                     <ListItemText
-                      primary={condition.name}
-                      secondary={`Diagnosed: ${condition.diagnosedDate?.toDate?.()?.toLocaleDateString()}`}
+                      primary={condition.conditionName}
+                      secondary={`Diagnosed: ${new Date(condition.onsetDate).toLocaleDateString()}`}
                     />
                     <Chip 
                       label={condition.severity || 'Moderate'} 
@@ -319,7 +290,7 @@ export default function HealthSummary() {
             {healthData.medications.length > 0 ? (
               <List>
                 {healthData.medications.map((medication) => (
-                  <ListItem key={medication.id} divider>
+                  <ListItem key={medication._id} divider>
                     <ListItemIcon>
                       <CheckIcon color="success" />
                     </ListItemIcon>
@@ -353,7 +324,7 @@ export default function HealthSummary() {
             {healthData.allergies.length > 0 ? (
               <List>
                 {healthData.allergies.map((allergy) => (
-                  <ListItem key={allergy.id} divider>
+                  <ListItem key={allergy._id} divider>
                     <ListItemIcon>
                       <WarningIcon color="error" />
                     </ListItemIcon>

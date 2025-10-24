@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Container, Paper, Typography, TextField, Button, MenuItem, Grid, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton
+  Box, Container, Paper, Typography, TextField, Button, MenuItem, Grid, CircularProgress, Alert, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, InputAdornment, Stack
 } from '@mui/material';
-import { Edit, Delete } from '@mui/icons-material';
+import { Edit, Delete, CloudDownload as SeedIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import Swal from 'sweetalert2';
 import { facilityApi } from '../../services/facilityApi';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +19,8 @@ const emptyFacility = {
 const FacilityManagement = () => {
   const { user, token } = useAuth();
   const [facilities, setFacilities] = useState([]);
+  const [filteredFacilities, setFilteredFacilities] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [form, setForm] = useState(emptyFacility);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -28,16 +30,42 @@ const FacilityManagement = () => {
     fetchFacilities();
   }, []);
 
+  useEffect(() => {
+    filterFacilities();
+  }, [facilities, searchTerm]);
+
   const fetchFacilities = async () => {
     setLoading(true);
     try {
       const data = await facilityApi.getAll();
       setFacilities(data);
+      setFilteredFacilities(data);
     } catch (err) {
       setError('Failed to fetch facilities');
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterFacilities = () => {
+    if (!searchTerm.trim()) {
+      setFilteredFacilities(facilities);
+      return;
+    }
+
+    const filtered = facilities.filter(facility =>
+      facility.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      facility.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      facility.province?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      facility.district?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      facility.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      facility.code?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredFacilities(filtered);
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
   };
 
   if (!user || user.role !== 'ADMIN') {
@@ -95,11 +123,51 @@ const FacilityManagement = () => {
     setEditingId(null);
   };
 
+  const handleSeedSAFacilities = async () => {
+    if (!window.confirm('This will add comprehensive South African hospitals and clinics to the database. Continue?')) return;
+
+    setLoading(true);
+    try {
+      // Call the seeding endpoint
+      await fetch('http://localhost:5000/api/facilities/seed-sa', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      Swal.fire('Success!', 'South African facilities have been seeded successfully.', 'success');
+      fetchFacilities();
+    } catch (err) {
+      setError('Failed to seed South African facilities');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f7fafd', py: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Container maxWidth="md">
         <Paper elevation={6} sx={{ borderRadius: 4, p: { xs: 2, sm: 6 }, boxShadow: 6 }}>
           <Typography variant="h5" sx={{ mb: 4, fontWeight: 600 }}>Facility Management</Typography>
+
+          {/* Seed South African Facilities Button */}
+          <Box sx={{ mb: 3 }}>
+            <Button
+              variant="outlined"
+              startIcon={<SeedIcon />}
+              onClick={handleSeedSAFacilities}
+              disabled={loading}
+              sx={{ mb: 2 }}
+            >
+              Seed South African Facilities
+            </Button>
+            <Typography variant="body2" color="text.secondary">
+              Add comprehensive list of hospitals and clinics from all South African provinces
+            </Typography>
+          </Box>
+
           <form onSubmit={handleSubmit} style={{ marginBottom: 32 }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -134,6 +202,35 @@ const FacilityManagement = () => {
             </Grid>
           </form>
           {error && <Alert severity="error">{error}</Alert>}
+
+          {/* Search Bar */}
+          <Box sx={{ mb: 3 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+              <TextField
+                placeholder="Search facilities by name, type, province, district, address, or code..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchTerm && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={handleClearSearch}>
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ flex: 1 }}
+              />
+              <Typography variant="body2" color="text.secondary">
+                {filteredFacilities.length} of {facilities.length} facilities
+              </Typography>
+            </Stack>
+          </Box>
           {loading ? <CircularProgress /> : (
             <TableContainer component={Paper} sx={{ mt: 4 }}>
               <Table>
@@ -149,20 +246,28 @@ const FacilityManagement = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {facilities.map((facility) => (
-                    <TableRow key={facility._id}>
-                      <TableCell>{facility.name}</TableCell>
-                      <TableCell>{facility.type}</TableCell>
-                      <TableCell>{facility.province}</TableCell>
-                      <TableCell>{facility.district}</TableCell>
-                      <TableCell>{facility.code}</TableCell>
-                      <TableCell>{facility.address}</TableCell>
-                      <TableCell align="right">
-                        <IconButton onClick={() => handleEdit(facility)} color="primary"><Edit /></IconButton>
-                        <IconButton onClick={() => handleDelete(facility._id)} color="error"><Delete /></IconButton>
+                  {filteredFacilities.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center">
+                        {searchTerm ? 'No facilities found matching your search.' : 'No facilities found.'}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredFacilities.map((facility) => (
+                      <TableRow key={facility._id}>
+                        <TableCell>{facility.name}</TableCell>
+                        <TableCell>{facility.type}</TableCell>
+                        <TableCell>{facility.province}</TableCell>
+                        <TableCell>{facility.district}</TableCell>
+                        <TableCell>{facility.code}</TableCell>
+                        <TableCell>{facility.address}</TableCell>
+                        <TableCell align="right">
+                          <IconButton onClick={() => handleEdit(facility)} color="primary"><Edit /></IconButton>
+                          <IconButton onClick={() => handleDelete(facility._id)} color="error"><Delete /></IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>

@@ -28,7 +28,7 @@ router.post('/register', async (req, res) => {
     const { 
       name, email, password, role, phone,
       // Patient-specific fields
-      idNumber, dateOfBirth, gender, address, emergencyContact, emergencyPhone,
+      idNumber, dateOfBirth, gender, address, emergencyContact, emergencyPhone, facilityId,
       // Professional fields
       licenseNumber, specialization, department, qualifications, experience
     } = req.body;
@@ -71,6 +71,10 @@ router.post('/register', async (req, res) => {
       if (address) userData.address = address;
       if (emergencyContact) userData.emergencyContact = emergencyContact;
       if (emergencyPhone) userData.emergencyPhone = emergencyPhone;
+      if (facilityId) {
+        userData.facilityId = facilityId; // Single facility assignment for patients
+        userData.facilityIds = [facilityId]; // Also add to array for compatibility
+      }
     }
     
     // Add professional fields if role is doctor or nurse

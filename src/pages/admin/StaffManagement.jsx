@@ -124,7 +124,6 @@ const StaffManagement = () => {
   const filteredStaff = staff.filter(s => {
     const matchesSearch =
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
-      s.email?.toLowerCase().includes(search.toLowerCase()) ||
       s.department?.toLowerCase().includes(search.toLowerCase()) ||
       s.role?.toLowerCase().includes(search.toLowerCase());
     const matchesRole = filterRole ? s.role === filterRole : true;
@@ -320,7 +319,7 @@ const StaffManagement = () => {
               ))}
             </TextField>
             <TextField
-              placeholder="Search staff..."
+              placeholder="Search staff by name..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               InputProps={{

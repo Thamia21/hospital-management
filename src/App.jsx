@@ -15,6 +15,7 @@ import { LoadingProvider } from './context/LoadingContext';
 import { ErrorProvider } from './context/ErrorContext';
 import { RealTimeProvider } from './context/RealTimeContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 
 // Layouts
@@ -38,6 +39,8 @@ import AddStaff from './pages/admin/AddStaff';
 import StaffManagement from './pages/admin/StaffManagement';
 import FacilityManagement from './pages/admin/FacilityManagement';
 import LeaveManagement from './pages/admin/LeaveManagement';
+import PatientManagement from './pages/admin/PatientManagement';
+import AddPatient from './pages/admin/AddPatient';
 
 // Doctor Pages
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
@@ -45,6 +48,7 @@ import DoctorMessages from './pages/doctor/DoctorMessages';
 import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import DoctorPatients from './pages/doctor/DoctorPatients';
 import DoctorProfile from './pages/doctor/DoctorProfile';
+import DoctorPatientMedicalRecords from './pages/doctor/DoctorPatientMedicalRecords';
 
 // Nurse Pages
 import NurseDashboard from './pages/nurse/NurseDashboard';
@@ -63,7 +67,7 @@ import PatientProfile from './pages/patient/PatientProfile.jsx';
 import PatientAppointments from './pages/patient/PatientAppointments';
 import TestResults from './pages/patient/TestResults';
 import PatientPrescriptions from './pages/patient/PatientPrescriptions';
-import PatientBilling from './pages/patient/PatientBilling';
+import PatientBilling from './pages/patient/PatientBillingWrapper';
 import HealthSummary from './pages/patient/HealthSummary';
 import PatientMessages from './pages/patient/PatientMessages';
 
@@ -159,36 +163,38 @@ function App() {
             <QueryClientProvider client={queryClient}>
               <LoadingProvider>
                 <ErrorProvider>
-                  <RealTimeProvider>
-                  <>
-                    <Router>
-                      <Suspense fallback={<SuspenseFallback />}>
-                        <div>
-                          {/*<h1>Hospital Management System</h1>*/}
-                          <AppRoutes />
-                          <NotificationTestWrapper />
-                        </div>
-                      </Suspense>
-                    </Router>
-                  </>
-                  <ReactQueryDevtools initialIsOpen={false} />
-                </RealTimeProvider>
-              </ErrorProvider>
-            </LoadingProvider>
-          </QueryClientProvider>
-        </LocalizationProvider>
-      </ThemeProvider>
-      <ToastContainer 
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
+                  <NotificationProvider>
+                    <RealTimeProvider>
+                    <>
+                      <Router>
+                        <Suspense fallback={<SuspenseFallback />}>
+                          <div>
+                            {/*<h1>Hospital Management System</h1>*/}
+                            <AppRoutes />
+                            <NotificationTestWrapper />
+                          </div>
+                        </Suspense>
+                      </Router>
+                    </>
+                    <ReactQueryDevtools initialIsOpen={false} />
+                    </RealTimeProvider>
+                  </NotificationProvider>
+                </ErrorProvider>
+              </LoadingProvider>
+            </QueryClientProvider>
+          </LocalizationProvider>
+        </ThemeProvider>
+        <ToastContainer 
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+        />
       </AuthProvider>
     </LanguageProvider>
   );
@@ -271,6 +277,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["ADMIN"]}>
               <LeaveManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/patient-management"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <PatientManagement />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/add-patient"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AddPatient />
             </ProtectedRoute>
           }
         />
@@ -395,6 +417,11 @@ function AppRoutes() {
         <Route path="/doctor-settings" element={
           <ProtectedRoute allowedRoles={['DOCTOR']}>
             <Settings />
+          </ProtectedRoute>
+        } />
+        <Route path="/patient/:patientId/medical-records" element={
+          <ProtectedRoute allowedRoles={['DOCTOR']}>
+            <DoctorPatientMedicalRecords />
           </ProtectedRoute>
         } />
       </Route>

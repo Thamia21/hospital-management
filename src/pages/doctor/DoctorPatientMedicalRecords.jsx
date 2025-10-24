@@ -27,6 +27,8 @@ import {
   InputAdornment,
   Tab,
   Tabs,
+  Breadcrumbs,
+  Link as MuiLink,
 } from '@mui/material';
 import {
   Description as RecordIcon,
@@ -44,12 +46,14 @@ import {
   Science as LabIcon,
   Monitor as VitalIcon,
   Psychology as DiagnosisIcon,
+  NavigateNext as NavigateNextIcon,
+  Person as PatientIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import { useParams, Link as RouterLink } from 'react-router-dom';
 import axios from 'axios';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -76,25 +80,30 @@ function TabPanel({ children, value, index, ...other }) {
   );
 }
 
-export default function PatientMedicalRecords() {
+export default function DoctorPatientMedicalRecords() {
   const { user } = useAuth();
+  const { patientId } = useParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [medicalRecords, setMedicalRecords] = useState([]);
+  const [patientInfo, setPatientInfo] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [detailDialog, setDetailDialog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
-    fetchMedicalRecords();
-  }, [user.uid]);
+    if (patientId) {
+      fetchMedicalRecords();
+      fetchPatientInfo();
+    }
+  }, [patientId]);
 
   const fetchMedicalRecords = async () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${API_URL}/patients/${user.uid}/medical-records`,
+        `${API_URL}/doctors/${user.id}/patients/${patientId}/medical-records`,
         { headers: getAuthHeader() }
       );
       setMedicalRecords(response.data || []);
@@ -104,6 +113,19 @@ export default function PatientMedicalRecords() {
       setMedicalRecords([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPatientInfo = async () => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/users/${patientId}`,
+        { headers: getAuthHeader() }
+      );
+      setPatientInfo(response.data);
+    } catch (error) {
+      console.error('Error fetching patient info:', error);
+      setPatientInfo(null);
     }
   };
 
@@ -197,7 +219,7 @@ export default function PatientMedicalRecords() {
     autoTable(doc, {
       startY: 30,
       head: [['Patient Name', 'Patient ID']],
-      body: [[user?.name || 'N/A', user?.uid || 'N/A']],
+      body: [[patientInfo?.name || 'N/A', patientId || 'N/A']],
       theme: 'striped',
       headStyles: { fillColor: [22, 160, 133] },
     });
@@ -269,12 +291,37 @@ export default function PatientMedicalRecords() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        My Medical Records
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        View your complete medical history, diagnoses, treatments, and test results.
-      </Typography>
+      {/* Breadcrumb Navigation */}
+      <Breadcrumbs
+        separator={<NavigateNextIcon fontSize="small" />}
+        aria-label="breadcrumb"
+        sx={{ mb: 3 }}
+      >
+        <MuiLink component={RouterLink} to="/doctor-dashboard" underline="hover" color="inherit">
+          Dashboard
+        </MuiLink>
+        <MuiLink component={RouterLink} to="/doctor-patients" underline="hover" color="inherit">
+          My Patients
+        </MuiLink>
+        <Typography color="text.primary">
+          {patientInfo?.name || 'Patient'} Medical Records
+        </Typography>
+      </Breadcrumbs>
+
+      {/* Header */}
+      <Box display="flex" alignItems="center" mb={3}>
+        <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+          <PatientIcon />
+        </Avatar>
+        <Box>
+          <Typography variant="h4" gutterBottom>
+            {patientInfo?.name || 'Patient'} Medical Records
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            View complete medical history, diagnoses, treatments, and test results for this patient.
+          </Typography>
+        </Box>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -419,15 +466,15 @@ export default function PatientMedicalRecords() {
                 No {type === 'all' ? 'medical records' : type.replace('_', ' ')} found
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {searchTerm ? 'Try adjusting your search terms.' : 'Your medical records will appear here.'}
+                {searchTerm ? 'Try adjusting your search terms.' : 'Patient medical records will appear here.'}
               </Typography>
             </Paper>
           ) : (
             <Grid container spacing={3}>
               {recordsByType[type].map((record) => (
                 <Grid item xs={12} md={6} key={record._id}>
-                  <Card 
-                    sx={{ 
+                  <Card
+                    sx={{
                       height: '100%',
                       cursor: 'pointer',
                       transition: 'transform 0.2s, box-shadow 0.2s',
@@ -489,7 +536,7 @@ export default function PatientMedicalRecords() {
 
                       <Box display="flex" justifyContent="flex-end" mt={2}>
                         <Tooltip title="View Details">
-                          <IconButton 
+                          <IconButton
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -500,8 +547,8 @@ export default function PatientMedicalRecords() {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Print Record">
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             onClick={(e) => {
                               e.stopPropagation();
                               handlePrint(record);
@@ -511,7 +558,7 @@ export default function PatientMedicalRecords() {
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Download PDF">
-                          <IconButton 
+                          <IconButton
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -532,8 +579,8 @@ export default function PatientMedicalRecords() {
       ))}
 
       {/* Medical Record Detail Dialog */}
-      <Dialog 
-        open={detailDialog} 
+      <Dialog
+        open={detailDialog}
         onClose={closeDetailDialog}
         maxWidth="md"
         fullWidth

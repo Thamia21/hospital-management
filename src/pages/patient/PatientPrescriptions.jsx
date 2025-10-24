@@ -39,6 +39,8 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { patientService } from '../../services/api';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function PatientPrescriptions() {
   const { user } = useAuth();
@@ -98,7 +100,11 @@ export default function PatientPrescriptions() {
   const formatDate = (date) => {
     if (!date) return 'N/A';
     try {
-      return new Date(date).toLocaleDateString();
+      return new Date(date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
     } catch {
       return 'Invalid Date';
     }
@@ -120,8 +126,45 @@ export default function PatientPrescriptions() {
   };
 
   const handleDownload = (prescription) => {
-    // In a real app, this would download a PDF of the prescription
-    console.log('Download prescription:', prescription.id);
+    if (!prescription) return;
+
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(22);
+    doc.text('Medical Prescription', 14, 22);
+
+    // Patient and Doctor Info
+    autoTable(doc, {
+      startY: 30,
+      head: [['Patient Name', 'Prescribed By', 'Date']],
+      body: [[user?.name || 'N/A', `Dr. ${prescription.doctorName || 'Unknown'}`, formatDate(prescription.prescribedDate)]],
+      theme: 'striped',
+    });
+
+    // Medications Table
+    if (prescription.medications && prescription.medications.length > 0) {
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Medication', 'Dosage', 'Frequency', 'Duration']],
+        body: prescription.medications.map(med => [med.name, med.dosage, med.frequency, med.duration]),
+        theme: 'grid',
+      });
+    }
+
+    // Instructions and Notes
+    let finalY = doc.lastAutoTable.finalY;
+    if (prescription.generalInstructions) {
+      doc.text('General Instructions:', 14, finalY + 15);
+      doc.text(prescription.generalInstructions, 14, finalY + 22, { maxWidth: 180 });
+      finalY = doc.lastAutoTable.finalY > finalY ? doc.lastAutoTable.finalY : finalY + 22;
+    }
+    if (prescription.notes) {
+      doc.text('Notes:', 14, finalY + 15);
+      doc.text(prescription.notes, 14, finalY + 22, { maxWidth: 180 });
+    }
+
+    doc.save(`prescription-${prescription._id}.pdf`);
   };
 
   if (loading) {
@@ -241,7 +284,7 @@ export default function PatientPrescriptions() {
       ) : (
         <Grid container spacing={3}>
           {prescriptions.map((prescription) => (
-            <Grid item xs={12} md={6} key={prescription.id}>
+            <Grid item xs={12} md={6} key={prescription._id}>
               <Card 
                 sx={{ 
                   height: '100%',

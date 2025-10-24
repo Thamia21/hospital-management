@@ -58,9 +58,9 @@ const DoctorDashboard = () => {
     error: appointmentsError,
     refetch: refetchAppointments
   } = useQuery({
-    queryKey: ['doctorAppointments', user?._id || user?.id, refreshKey],
-    queryFn: () => doctorService.getDoctorAppointmentsMongo(user?._id || user?.id),
-    enabled: !!(user?._id || user?.id),
+    queryKey: ['doctorAppointments', user?._id, refreshKey],
+    queryFn: () => doctorService.getDoctorAppointmentsMongo(user?._id),
+    enabled: !!user?._id,
     refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
     refetchOnWindowFocus: true
   });
@@ -70,9 +70,9 @@ const DoctorDashboard = () => {
     data: dashboardStats, 
     isLoading: statsLoading 
   } = useQuery({
-    queryKey: ['doctorStats', user?._id || user?.id],
-    queryFn: () => doctorService.getDoctorDashboardStats(user?._id || user?.id),
-    enabled: !!(user?._id || user?.id),
+    queryKey: ['doctorStats', user?._id],
+    queryFn: () => doctorService.getDoctorDashboardStats(user?._id),
+    enabled: !!user?._id,
     refetchInterval: 60000 // Refetch every minute
   });
 
@@ -375,7 +375,9 @@ const DoctorDashboard = () => {
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                              {appointment.patientId?.name || 'Patient'}
+                              {appointment.patientId?.name ||
+                               (appointment.patientId && typeof appointment.patientId === 'object' && appointment.patientId.email) ||
+                               (typeof appointment.patientId === 'string' ? appointment.patientId : 'Patient')}
                             </Typography>
                             <Chip 
                               label={appointment.status}

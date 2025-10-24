@@ -26,7 +26,9 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { doctorService, patientService, leaveService } from '../../services/api';
 import axios from 'axios';
-import PayPalButton from '../../components/payments/PayPalButton';
+import StripePaymentForm from '../../components/StripePaymentForm';
+import { Elements } from '@stripe/react-stripe-js';
+import { stripePromise } from '../../config/stripe';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -55,6 +57,15 @@ export default function BookAppointment() {
   const [paymentDetails, setPaymentDetails] = useState(null); // { orderId, capture }
   const [paymentMessage, setPaymentMessage] = useState('');
 
+  // Payment fields
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [medicalAidNumber, setMedicalAidNumber] = useState('');
+  const [medicalAidProvider, setMedicalAidProvider] = useState('');
+  const [insurancePolicyNumber, setInsurancePolicyNumber] = useState('');
+  const [insuranceProvider, setInsuranceProvider] = useState('');
+  const [bankReferenceNumber, setBankReferenceNumber] = useState('');
+  const [paymentNotes, setPaymentNotes] = useState('');
+
   // Local API client for recording payments
   const API_URL = 'http://localhost:5000/api';
   const getAuthHeader = () => {
@@ -62,29 +73,24 @@ export default function BookAppointment() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
-  const handlePaymentSuccess = useCallback(async ({ orderId, capture }) => {
+  const handlePaymentSuccess = useCallback(async ({ paymentIntentId, amount, currency }) => {
     try {
-      if (!orderId) {
-        throw new Error('No order ID received from payment processor');
+      if (!paymentIntentId) {
+        throw new Error('No payment intent ID received from payment processor');
       }
 
-      // Persist the payment to backend so it shows in Patient Billing
-      const captured = capture?.purchase_units?.[0]?.payments?.captures?.[0];
-      const amountValue = captured?.amount?.value ? Number(captured.amount.value) : 50;
-      const currencyCode = captured?.amount?.currency_code || 'ZAR';
-      const transactionId = captured?.id || orderId;
-
+      // Save payment record to backend
       const paymentRecord = {
         patientId: user.uid,
         billId: null, // not linked to a specific bill for consultation prepayment
-        amount: amountValue,
-        currency: currencyCode,
-        paymentMethod: 'paypal',
+        amount: amount,
+        currency: currency,
+        paymentMethod: 'stripe',
         status: 'completed',
-        transactionId,
+        transactionId: paymentIntentId,
         description: 'Doctor Consultation Fee',
         processedAt: new Date().toISOString(),
-        metadata: { orderId }
+        metadata: { paymentIntentId }
       };
 
       console.log('Saving payment to backend:', {
@@ -98,7 +104,7 @@ export default function BookAppointment() {
       );
       console.log('Payment saved response:', saveRes.status, saveRes.data);
 
-      setPaymentDetails({ orderId, capture });
+      setPaymentDetails({ paymentIntentId, amount, currency });
       setPaymentMessage('Payment successful. You can now submit your appointment.');
       // Clear any previous errors
       setError(prev => (prev && prev.includes('payment') ? '' : prev));
@@ -327,7 +333,7 @@ export default function BookAppointment() {
       }
 
       // Check if payment is required but not completed
-      if (payNow && !paymentDetails?.orderId) {
+      if (payNow && !paymentDetails?.paymentIntentId) {
         throw new Error('Please complete the payment process before submitting');
       }
 
@@ -348,7 +354,10 @@ export default function BookAppointment() {
         date: appointmentDateTime.toISOString(),
         reason,
         status: 'PENDING',
-        type: staffType.toUpperCase()
+        type: staffType.toUpperCase(),
+        paymentMethod: paymentMethod,
+        paymentAmount: 50,
+        paymentCurrency: 'ZAR'
       };
 
       // Add the appropriate staff ID
@@ -358,18 +367,39 @@ export default function BookAppointment() {
         appointmentData.nurseId = selectedStaff;
       }
 
+      // Add payment-specific fields based on payment method
+      if (paymentMethod === 'MEDICAL_AID') {
+        appointmentData.medicalAidNumber = medicalAidNumber;
+        appointmentData.medicalAidProvider = medicalAidProvider;
+        appointmentData.paymentStatus = medicalAidNumber ? 'PENDING' : 'UNPAID';
+      } else if (paymentMethod === 'INSURANCE') {
+        appointmentData.insurancePolicyNumber = insurancePolicyNumber;
+        appointmentData.insuranceProvider = insuranceProvider;
+        appointmentData.paymentStatus = insurancePolicyNumber ? 'PENDING' : 'UNPAID';
+      } else if (paymentMethod === 'BANK_TRANSFER') {
+        appointmentData.bankReferenceNumber = bankReferenceNumber;
+        appointmentData.paymentStatus = bankReferenceNumber ? 'PENDING' : 'UNPAID';
+      } else if (paymentMethod === 'CASH') {
+        appointmentData.paymentStatus = 'UNPAID'; // Will pay at facility
+      } else if (paymentMethod === 'CARD') {
+        appointmentData.paymentStatus = 'UNPAID'; // Will be updated when payment completes
+      }
+
       // If user opted to pay now and payment captured, attach payment metadata
-      if (payNow && paymentDetails?.orderId) {
+      if (payNow && paymentDetails?.paymentIntentId) {
         appointmentData.paymentStatus = 'PAID';
-        appointmentData.paymentProvider = 'PAYPAL';
-        appointmentData.paymentOrderId = paymentDetails.orderId;
-        // Extract amount/currency from capture if available, default to 50 ZAR
-        const captured = paymentDetails.capture?.purchase_units?.[0]?.payments?.captures?.[0];
-        appointmentData.paymentAmount = captured?.amount?.value ? Number(captured.amount.value) : 50;
-        appointmentData.paymentCurrency = captured?.amount?.currency_code || 'ZAR';
+        appointmentData.paymentProvider = 'STRIPE';
+        appointmentData.paymentIntentId = paymentDetails.paymentIntentId;
+        appointmentData.paymentAmount = paymentDetails.amount;
+        appointmentData.paymentCurrency = paymentDetails.currency;
       } else if (payNow) {
         // This should theoretically never happen due to the earlier check
         throw new Error('Payment was required but no payment details were found');
+      }
+
+      // Add payment notes if provided
+      if (paymentNotes) {
+        appointmentData.paymentNotes = paymentNotes;
       }
 
       console.log('Submitting appointment:', appointmentData);
@@ -406,7 +436,7 @@ export default function BookAppointment() {
           Schedule your appointment with our healthcare professionals
         </Typography>
         <Alert severity="info" sx={{ mb: 2 }}>
-          <strong>Payment Notice:</strong> To see a doctor pay R50. Payment is optional and can be completed now via PayPal or at the facility.
+          <strong>Payment Options:</strong> Choose from cash, card, medical aid, bank transfer, or insurance. Card payments are processed securely via Stripe. You can also pay at the facility.
         </Alert>
         
         {error && (
@@ -592,10 +622,10 @@ export default function BookAppointment() {
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                   <Box>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Pay Consultation Fee Now (Optional)
+                      Payment Method (Optional)
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Secure payment via PayPal
+                      Choose your preferred payment method for the consultation fee
                     </Typography>
                   </Box>
                   <Switch
@@ -621,24 +651,179 @@ export default function BookAppointment() {
                     borderRadius: 1,
                     backgroundColor: 'background.default'
                   }}>
+                    {/* Payment Method Selection */}
+                    <FormControl fullWidth sx={{ mb: 3 }}>
+                      <InputLabel>Payment Method</InputLabel>
+                      <Select
+                        value={paymentMethod}
+                        label="Payment Method"
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                      >
+                        <MenuItem value="CASH">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            💵 Cash
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="CARD">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            💳 Card
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="MEDICAL_AID">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            🏥 Medical Aid
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="BANK_TRANSFER">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            🏦 Bank Transfer
+                          </Box>
+                        </MenuItem>
+                        <MenuItem value="INSURANCE">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            📋 Insurance
+                          </Box>
+                        </MenuItem>
+                      </Select>
+                    </FormControl>
+
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                       <Typography variant="body1">Consultation Fee</Typography>
-                      <Typography variant="body1" fontWeight="bold">$2.70 USD (R50.00 ZAR)</Typography>
+                      <Typography variant="body1" fontWeight="bold">R50.00 ZAR</Typography>
                     </Box>
 
-                    {!paymentDetails ? (
+                    {/* Show different payment options based on selected method */}
+                    {paymentMethod === 'CARD' && (
                       <Box sx={{ minHeight: '200px', display: 'flex', flexDirection: 'column' }}>
-                        <PayPalButton
-                          amount={"2.70"}
-                          currency="USD"
-                          description="Doctor Consultation Fee"
-                          onApproved={handlePaymentSuccess}
-                        />
+                        <Elements stripe={stripePromise}>
+                          <StripePaymentForm
+                            amount={50}
+                            billId={null}
+                            onSuccess={handlePaymentSuccess}
+                            onError={(error) => setError(error)}
+                            onCancel={() => setPayNow(false)}
+                          />
+                        </Elements>
                         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
-                          Secure payment processed by PayPal
+                          Secure payment processed by Stripe
                         </Typography>
                       </Box>
-                    ) : (
+                    )}
+
+                    {paymentMethod === 'CASH' && (
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        <Typography variant="body2">
+                          💵 <strong>Cash Payment:</strong> You will pay R50.00 at the facility when you arrive for your appointment.
+                        </Typography>
+                      </Alert>
+                    )}
+
+                    {paymentMethod === 'MEDICAL_AID' && (
+                      <Box sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          <Typography variant="body2">
+                            🏥 <strong>Medical Aid:</strong> Please have your medical aid card ready at the appointment.
+                          </Typography>
+                        </Alert>
+                        <TextField
+                          fullWidth
+                          label="Medical Aid Number"
+                          placeholder="Enter your medical aid number"
+                          variant="outlined"
+                          size="small"
+                          value={medicalAidNumber}
+                          onChange={(e) => setMedicalAidNumber(e.target.value)}
+                        />
+                        <TextField
+                          fullWidth
+                          label="Medical Aid Provider"
+                          placeholder="e.g., Discovery, Medihelp"
+                          variant="outlined"
+                          size="small"
+                          sx={{ mt: 1 }}
+                          value={medicalAidProvider}
+                          onChange={(e) => setMedicalAidProvider(e.target.value)}
+                        />
+                      </Box>
+                    )}
+
+                    {paymentMethod === 'BANK_TRANSFER' && (
+                      <Box sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          <Typography variant="body2">
+                            🏦 <strong>Bank Transfer:</strong> Please transfer R50.00 to the following account:
+                          </Typography>
+                        </Alert>
+                        <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                            Bank: MediConnect Healthcare Bank<br/>
+                            Account: 1234567890<br/>
+                            Reference: APT-{user?.uid?.slice(-8) || 'REF'}
+                          </Typography>
+                        </Box>
+                        <TextField
+                          fullWidth
+                          label="Bank Reference Number"
+                          placeholder="Enter bank reference number"
+                          variant="outlined"
+                          size="small"
+                          sx={{ mt: 1 }}
+                          value={bankReferenceNumber}
+                          onChange={(e) => setBankReferenceNumber(e.target.value)}
+                        />
+                      </Box>
+                    )}
+
+                    {paymentMethod === 'INSURANCE' && (
+                      <Box sx={{ mb: 2 }}>
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          <Typography variant="body2">
+                            📋 <strong>Insurance:</strong> Please have your insurance details ready at the appointment.
+                          </Typography>
+                        </Alert>
+                        <TextField
+                          fullWidth
+                          label="Insurance Policy Number"
+                          placeholder="Enter your insurance policy number"
+                          variant="outlined"
+                          size="small"
+                          value={insurancePolicyNumber}
+                          onChange={(e) => setInsurancePolicyNumber(e.target.value)}
+                        />
+                        <TextField
+                          fullWidth
+                          label="Insurance Provider"
+                          placeholder="e.g., Momentum, Liberty"
+                          variant="outlined"
+                          size="small"
+                          sx={{ mt: 1 }}
+                          value={insuranceProvider}
+                          onChange={(e) => setInsuranceProvider(e.target.value)}
+                        />
+                      </Box>
+                    )}
+
+                    {/* Payment Notes (Optional) */}
+                    <TextField
+                      fullWidth
+                      label="Payment Notes (Optional)"
+                      placeholder="Any additional payment information or notes"
+                      variant="outlined"
+                      size="small"
+                      multiline
+                      rows={2}
+                      sx={{ mt: 2 }}
+                      value={paymentNotes}
+                      onChange={(e) => setPaymentNotes(e.target.value)}
+                    />
+
+                    {!paymentDetails && paymentMethod === 'CARD' && (
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                        Secure payment processed by Stripe
+                      </Typography>
+                    )}
+
+                    {paymentDetails && paymentMethod === 'CARD' && (
                       <Alert
                         severity="success"
                         sx={{
@@ -671,7 +856,7 @@ export default function BookAppointment() {
 
               {!payNow && (
                 <Alert severity="info" sx={{ mt: 2 }}>
-                  You can choose to pay later at the facility. Your appointment will be confirmed once payment is received.
+                  You can choose your payment method and pay at the facility, or select "Payment Method" above to pay now. Your appointment will be confirmed once payment is received.
                 </Alert>
               )}
             </Grid>
