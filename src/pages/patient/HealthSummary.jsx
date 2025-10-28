@@ -219,13 +219,15 @@ export default function HealthSummary() {
             <VitalsIcon sx={{ mr: 1 }} />
             Recent Vital Signs
           </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={() => setAddVitalDialog(true)}
-          >
-            Add Vital
-          </Button>
+          {(user?.role === 'DOCTOR' || user?.role === 'NURSE') && (
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => setAddVitalDialog(true)}
+            >
+              Add Vital
+            </Button>
+          )}
         </Box>
         
         {vitalCards.length > 0 ? (

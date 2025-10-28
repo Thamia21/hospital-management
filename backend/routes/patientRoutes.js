@@ -193,9 +193,21 @@ router.get('/:patientId/bills', verifyPatientAccess, async (req, res) => {
     const { patientId } = req.params;
     
     // Try to get real data from database first
-    const dbBills = await Bill.find({ patientId }).sort({ createdAt: -1 }).lean();
-    if (dbBills && dbBills.length) {
-      return res.json(dbBills);
+    const mongoose = require('mongoose');
+    try {
+      console.log('Fetching bills for patientId:', patientId, 'Type:', typeof patientId);
+      let dbBills = [];
+      if (mongoose.Types.ObjectId.isValid(patientId)) {
+        dbBills = await Bill.find({ patientId: new mongoose.Types.ObjectId(patientId) }).sort({ createdAt: -1 }).lean();
+      } else {
+        dbBills = await Bill.find({ patientId: patientId }).sort({ createdAt: -1 }).lean();
+      }
+      if (dbBills && dbBills.length) {
+        return res.json(dbBills);
+      }
+    } catch (castErr) {
+      console.error('Error fetching bills for patient:', patientId, castErr);
+      return res.status(500).json({ message: 'Error fetching bills', error: castErr.message });
     }
 
     // Fallback to mock data
@@ -723,4 +735,32 @@ router.get('/:patientId/allergies', verifyPatientAccess, async (req, res) => {
   }
 });
 
+// GET health summary
+router.get('/:patientId/health-summary', auth, async (req, res) => {
+  const { patientId } = req.params;
+  const user = await User.findById(patientId);
+  res.json({ summary: user?.healthSummary || '' });
+});
+
+// PUT health summary
+router.put('/:patientId/health-summary', auth, async (req, res) => {
+  const { patientId } = req.params;
+  const { summary } = req.body;
+  await User.findByIdAndUpdate(patientId, { healthSummary: summary });
+  res.json({ message: 'Health summary updated' });
+});
+
+// GET /api/doctors/:doctorId/patients/:patientId/medical-records
+router.get('/doctors/:doctorId/patients/:patientId/medical-records', auth, async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    // Optionally, check doctorId permissions here
+    const records = await MedicalRecord.find({ patientId }).sort({ recordDate: -1 });
+    res.json(records);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch medical records', error: error.message });
+  }
+});
+
 module.exports = router;
+

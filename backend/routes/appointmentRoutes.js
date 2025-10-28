@@ -36,6 +36,36 @@ router.post('/', auth, async (req, res) => {
     const appointment = new Appointment(req.body);
     await appointment.save();
 
+    // Auto-generate outstanding bill if payment is not completed
+    if (appointment.paymentStatus !== 'PAID') {
+      const Bill = require('../models/Bill');
+      const mongoose = require('mongoose');
+      const dueDate = new Date(appointment.date);
+      dueDate.setDate(dueDate.getDate() + 30); // 30 days after appointment
+      try {
+        const count = await Bill.countDocuments();
+        const billNumber = `BILL-${Date.now()}-${count + 1}`;
+        const billData = {
+          patientId: new mongoose.Types.ObjectId(appointment.patientId),
+          billNumber,
+          description: 'Doctor Consultation Fee',
+          amount: appointment.paymentAmount || 50,
+          dueDate,
+          status: 'pending',
+          serviceDate: appointment.date,
+          services: [
+            { name: 'Consultation', cost: appointment.paymentAmount || 50, quantity: 1 }
+          ],
+          paymentMethod: appointment.paymentMethod ? appointment.paymentMethod.toLowerCase() : undefined
+        };
+        console.log('Creating Bill:', billData);
+        const createdBill = await Bill.create(billData);
+        console.log('Bill created successfully:', createdBill._id);
+      } catch (err) {
+        console.error('Error creating Bill after appointment:', err);
+      }
+    }
+
     // Send real-time notification to patient
     try {
       await notificationService.sendAppointmentNotification(appointment, 'created', sseManager);

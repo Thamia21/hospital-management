@@ -81,7 +81,7 @@ export default function BookAppointment() {
 
       // Save payment record to backend
       const paymentRecord = {
-        patientId: user.uid,
+        patientId: (user?._id || user?.id || user?.uid),
         billId: null, // not linked to a specific bill for consultation prepayment
         amount: amount,
         currency: currency,
@@ -94,11 +94,11 @@ export default function BookAppointment() {
       };
 
       console.log('Saving payment to backend:', {
-        url: `${API_URL}/patients/${user.uid}/payments`,
+        url: `${API_URL}/patients/${(user?._id || user?.id || user?.uid)}/payments`,
         paymentRecord
       });
       const saveRes = await axios.post(
-        `${API_URL}/patients/${user.uid}/payments`,
+        `${API_URL}/patients/${(user?._id || user?.id || user?.uid)}/payments`,
         paymentRecord,
         { headers: getAuthHeader() }
       );
@@ -117,7 +117,7 @@ export default function BookAppointment() {
       setPaymentDetails(null);
       setPaymentMessage('');
     }
-  }, [user?.uid]);
+  }, [user?._id, user?.id, user?.uid]);
 
   // Fetch available doctors
   const { 
@@ -160,6 +160,22 @@ export default function BookAppointment() {
   // Reset staff selection when staff type changes
   useEffect(() => {
     setSelectedStaff('');
+  }, [staffType]);
+
+  // When switching to nurse, ensure payment is disabled and cleared
+  useEffect(() => {
+    if (staffType === 'nurse') {
+      setPayNow(false);
+      setPaymentDetails(null);
+      setPaymentMessage('');
+      setPaymentMethod('CASH');
+      setMedicalAidNumber('');
+      setMedicalAidProvider('');
+      setInsurancePolicyNumber('');
+      setInsuranceProvider('');
+      setBankReferenceNumber('');
+      setPaymentNotes('');
+    }
   }, [staffType]);
 
   // Get available staff based on selected type
@@ -332,9 +348,9 @@ export default function BookAppointment() {
         throw new Error('Please fill in all required fields');
       }
 
-      // Check if payment is required but not completed
-      if (payNow && !paymentDetails?.paymentIntentId) {
-        throw new Error('Please complete the payment process before submitting');
+      // Check if payment is required (doctors only) and not completed (for CARD)
+      if (staffType === 'doctor' && payNow && paymentMethod === 'CARD' && !paymentDetails?.paymentIntentId) {
+        throw new Error('Please complete the card payment before submitting');
       }
 
       // Format date and time for API
@@ -350,14 +366,11 @@ export default function BookAppointment() {
       }
 
       const appointmentData = {
-        patientId: user.uid,
+        patientId: (user?._id || user?.id || user?.uid),
         date: appointmentDateTime.toISOString(),
         reason,
         status: 'PENDING',
-        type: staffType.toUpperCase(),
-        paymentMethod: paymentMethod,
-        paymentAmount: 50,
-        paymentCurrency: 'ZAR'
+        type: staffType.toUpperCase()
       };
 
       // Add the appropriate staff ID
@@ -367,38 +380,47 @@ export default function BookAppointment() {
         appointmentData.nurseId = selectedStaff;
       }
 
-      // Add payment-specific fields based on payment method
-      if (paymentMethod === 'MEDICAL_AID') {
-        appointmentData.medicalAidNumber = medicalAidNumber;
-        appointmentData.medicalAidProvider = medicalAidProvider;
-        appointmentData.paymentStatus = medicalAidNumber ? 'PENDING' : 'UNPAID';
-      } else if (paymentMethod === 'INSURANCE') {
-        appointmentData.insurancePolicyNumber = insurancePolicyNumber;
-        appointmentData.insuranceProvider = insuranceProvider;
-        appointmentData.paymentStatus = insurancePolicyNumber ? 'PENDING' : 'UNPAID';
-      } else if (paymentMethod === 'BANK_TRANSFER') {
-        appointmentData.bankReferenceNumber = bankReferenceNumber;
-        appointmentData.paymentStatus = bankReferenceNumber ? 'PENDING' : 'UNPAID';
-      } else if (paymentMethod === 'CASH') {
-        appointmentData.paymentStatus = 'UNPAID'; // Will pay at facility
-      } else if (paymentMethod === 'CARD') {
-        appointmentData.paymentStatus = 'UNPAID'; // Will be updated when payment completes
+      // Payment fields only apply for doctor appointments
+      if (staffType === 'doctor') {
+        appointmentData.paymentMethod = paymentMethod;
+        appointmentData.paymentAmount = 50;
+        appointmentData.paymentCurrency = 'ZAR';
+
+        // Add payment-specific fields based on payment method
+        if (paymentMethod === 'MEDICAL_AID') {
+          appointmentData.medicalAidNumber = medicalAidNumber;
+          appointmentData.medicalAidProvider = medicalAidProvider;
+          appointmentData.paymentStatus = medicalAidNumber ? 'PENDING' : 'UNPAID';
+        } else if (paymentMethod === 'INSURANCE') {
+          appointmentData.insurancePolicyNumber = insurancePolicyNumber;
+          appointmentData.insuranceProvider = insuranceProvider;
+          appointmentData.paymentStatus = insurancePolicyNumber ? 'PENDING' : 'UNPAID';
+        } else if (paymentMethod === 'BANK_TRANSFER') {
+          appointmentData.bankReferenceNumber = bankReferenceNumber;
+          appointmentData.paymentStatus = bankReferenceNumber ? 'PENDING' : 'UNPAID';
+        } else if (paymentMethod === 'CASH') {
+          appointmentData.paymentStatus = 'UNPAID'; // Will pay at facility
+        } else if (paymentMethod === 'CARD') {
+          appointmentData.paymentStatus = 'UNPAID'; // Will be updated when payment completes
+        }
       }
 
-      // If user opted to pay now and payment captured, attach payment metadata
-      if (payNow && paymentDetails?.paymentIntentId) {
-        appointmentData.paymentStatus = 'PAID';
-        appointmentData.paymentProvider = 'STRIPE';
-        appointmentData.paymentIntentId = paymentDetails.paymentIntentId;
-        appointmentData.paymentAmount = paymentDetails.amount;
-        appointmentData.paymentCurrency = paymentDetails.currency;
-      } else if (payNow) {
-        // This should theoretically never happen due to the earlier check
-        throw new Error('Payment was required but no payment details were found');
+      // If user opted to pay now and payment captured (doctors only), attach payment metadata
+      if (staffType === 'doctor') {
+        if (payNow && paymentDetails?.paymentIntentId) {
+          appointmentData.paymentStatus = 'PAID';
+          appointmentData.paymentProvider = 'STRIPE';
+          appointmentData.paymentIntentId = paymentDetails.paymentIntentId;
+          appointmentData.paymentAmount = paymentDetails.amount;
+          appointmentData.paymentCurrency = paymentDetails.currency;
+        } else if (payNow && paymentMethod === 'CARD') {
+          // This should theoretically never happen due to the earlier check
+          throw new Error('Payment was required but no payment details were found');
+        }
       }
 
-      // Add payment notes if provided
-      if (paymentNotes) {
+      // Add payment notes if provided (doctors only)
+      if (staffType === 'doctor' && paymentNotes) {
         appointmentData.paymentNotes = paymentNotes;
       }
 
@@ -435,8 +457,11 @@ export default function BookAppointment() {
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
           Schedule your appointment with our healthcare professionals
         </Typography>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <strong>Notice:</strong> Doctor consultations require a payment of <strong>R50</strong>. Appointments with a nurse are free and do not require any payment.
+        </Alert>
         <Alert severity="info" sx={{ mb: 2 }}>
-          <strong>Payment Options:</strong> Choose from cash, card, medical aid, bank transfer, or insurance. Card payments are processed securely via Stripe. You can also pay at the facility.
+          <strong>Payment Options:</strong> If you choose a doctor, you can pay now (card via Stripe) or pay later at the facility using cash, medical aid, bank transfer, or insurance.
         </Alert>
         
         {error && (
@@ -580,16 +605,12 @@ export default function BookAppointment() {
                     value={selectedTime}
                     onChange={setSelectedTime}
                     renderInput={(params) => <TextField {...params} />}
-                    minTime={new Date(0, 0, 0, 9)} // 9 AM
-                    maxTime={new Date(0, 0, 0, 17)} // 5 PM
-                    minutesStep={30} // 30-minute intervals
-                    shouldDisableTime={(time) => {
-                      const hours = time.getHours();
-                      const minutes = time.getMinutes();
-                      // Disable lunch hour (12-1 PM)
-                      if (hours === 12) return true;
-                      // Only allow appointments on the hour and half hour
-                      return minutes !== 0 && minutes !== 30;
+                    minTime="09:00"
+                    maxTime="16:30"
+                    minutesStep={30}
+                    shouldDisableTime={(value, view) => {
+                      if (view === 'hours' && value === 12) return true;
+                      return false;
                     }}
                   />
                 </LocalizationProvider>
@@ -610,7 +631,8 @@ export default function BookAppointment() {
               />
             </Grid>
 
-            {/* Optional Payment Section */}
+            {/* Optional Payment Section (Doctors only) */}
+            {staffType === 'doctor' && (
             <Grid item xs={12}>
               <Box sx={{
                 border: '1px solid',
@@ -758,7 +780,7 @@ export default function BookAppointment() {
                           <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
                             Bank: MediConnect Healthcare Bank<br/>
                             Account: 1234567890<br/>
-                            Reference: APT-{user?.uid?.slice(-8) || 'REF'}
+                            Reference: APT-{(user?._id || user?.id || user?.uid || '').toString().slice(-8) || 'REF'}
                           </Typography>
                         </Box>
                         <TextField
@@ -854,12 +876,13 @@ export default function BookAppointment() {
                 )}
               </Box>
 
-              {!payNow && (
+              {!payNow && staffType === 'doctor' && (
                 <Alert severity="info" sx={{ mt: 2 }}>
                   You can choose your payment method and pay at the facility, or select "Payment Method" above to pay now. Your appointment will be confirmed once payment is received.
                 </Alert>
               )}
             </Grid>
+            )}
 
             {/* Submit Button */}
             <Grid item xs={12}>
@@ -871,7 +894,7 @@ export default function BookAppointment() {
                 disabled={!selectedStaff || !selectedDate || !selectedTime || !reason || bookAppointmentMutation.isLoading}
                 startIcon={bookAppointmentMutation.isLoading ? <CircularProgress size={20} color="inherit" /> : null}
               >
-                {bookAppointmentMutation.isLoading ? 'Booking...' : 'Book Appointment'}
+                {bookAppointmentMutation.isLoading ? 'Booking...' : staffType === 'nurse' ? 'Book Free Appointment' : 'Book Appointment'}
               </Button>
             </Grid>
           </Grid>

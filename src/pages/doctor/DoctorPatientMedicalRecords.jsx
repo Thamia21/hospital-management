@@ -103,7 +103,7 @@ export default function DoctorPatientMedicalRecords() {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${API_URL}/doctors/${user.id}/patients/${patientId}/medical-records`,
+        `${API_URL}/patients/doctors/${user._id || user.id || user.uid}/patients/${patientId}/medical-records`,
         { headers: getAuthHeader() }
       );
       setMedicalRecords(response.data || []);

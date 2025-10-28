@@ -294,7 +294,7 @@ export default function PatientBilling() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {bills.filter(bill => bill.status !== 'paid').map((bill) => (
+              {bills.map((bill) => (
                 <TableRow key={bill._id || bill.id}>
                   <TableCell>{bill.billNumber || (bill._id ? bill._id.slice(-8) : bill.id?.slice(-8))}</TableCell>
                   <TableCell>{bill.description || bill.service || 'Medical Service'}</TableCell>

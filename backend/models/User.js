@@ -33,8 +33,8 @@ const userSchema = new mongoose.Schema({
   verificationToken: { type: String },
   resetPasswordToken: { type: String },
   resetPasswordExpires: { type: Date },
-  
   createdAt: { type: Date, default: Date.now },
+  healthSummary: { type: String },
 });
 
 // Generate a unique userId before saving

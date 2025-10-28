@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 const billSchema = new mongoose.Schema({
   patientId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
     index: true
   },
