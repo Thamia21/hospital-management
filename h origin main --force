@@ -1,0 +1,455 @@
+[33mcommit 43243be60d6b0a5394507e9f33969c12a4826ef8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Student <student@example.com>
+Date:   Tue Oct 28 12:59:35 2025 +0200
+
+    fixec billing and doctor to fetch patient medical record
+
+ backend/models/Bill.js                           |   3 [32m+[m[31m-[m
+ backend/models/User.js                           |   2 [32m+[m[31m-[m
+ backend/routes/appointmentRoutes.js              |  30 [32m+++++[m
+ backend/routes/patientRoutes.js                  |  46 [32m+++++++[m[31m-[m
+ src/pages/doctor/DoctorHealthSummary.jsx         |  76 [32m+++++++++++++[m
+ src/pages/doctor/DoctorPatientMedicalRecords.jsx |   2 [32m+[m[31m-[m
+ src/pages/patient/BookAppointment.jsx            | 133 [32m+++++++++++++[m[31m----------[m
+ src/pages/patient/HealthSummary.jsx              |  16 [32m+[m[31m--[m
+ src/pages/patient/PatientBilling.jsx             |   2 [32m+[m[31m-[m
+ 9 files changed, 241 insertions(+), 69 deletions(-)
+
+[33mcommit 4217bc09e9d8b4b492bb5b1c9cd7ae01232c378a[m
+Author: Student <student@example.com>
+Date:   Fri Oct 24 23:14:02 2025 +0200
+
+    Update .gitignore to ignore environment files
+
+ .gitignore | 1 [32m+[m
+ 1 file changed, 1 insertion(+)
+
+[33mcommit b8c8febd5c2c4a1e184a00154e7f18f26cae7a01[m
+Author: Student <student@example.com>
+Date:   Fri Oct 24 22:50:11 2025 +0200
+
+    Removed Stripe keys and updated .gitignore
+
+ USER_INTERFACE_OVERVIEW.txt                      |  494 [32m+++++++++[m
+ backend/data/southAfricanFacilities.js           |  466 [32m++++++++[m
+ backend/models/Allergy.js                        |   34 [32m+[m
+ backend/models/Appointment.js                    |   15 [32m+[m[31m-[m
+ backend/models/Condition.js                      |   33 [32m+[m
+ backend/models/MedicalRecord.js                  |   38 [32m+[m
+ backend/models/Payment.js                        |    2 [32m+[m[31m-[m
+ backend/models/TestResult.js                     |   45 [32m+[m
+ backend/models/Vital.js                          |   31 [32m+[m
+ backend/package-lock.json                        |   21 [32m+[m
+ backend/package.json                             |    1 [32m+[m
+ backend/routes/appointmentRoutes.js              |  417 [32m+++++[m[31m---[m
+ backend/routes/authRoutes.js                     |    6 [32m+[m[31m-[m
+ backend/routes/facilityRoutes.js                 |   39 [32m+[m[31m-[m
+ backend/routes/patientRoutes.js                  |  287 [32m++++[m[31m-[m
+ backend/routes/paymentRoutes.js                  |  203 [32m++[m[31m--[m
+ backend/routes/userRoutes.js                     |  124 [32m++[m[31m-[m
+ backend/scripts/seedFacilities.js                |   58 [32m+[m
+ backend/scripts/testStripeIntegration.js         |   57 [32m+[m
+ backend/scripts/updateDemoAccountsWithSAId.js    |   69 [32m++[m
+ backend/server.js                                |   47 [32m+[m[31m-[m
+ backend/services/notificationService.js          |   88 [32m++[m
+ backend/services/sseManager.js                   |   70 [32m++[m
+ backend/test-config.js                           |   33 [32m+[m
+ debug-appointments.cjs                           |   45 [32m+[m
+ docs/HospitalArchitectureBlueprint.jsx           |  512 [32m+++++++++[m
+ package-lock.json                                |   91 [32m+[m[31m-[m
+ package.json                                     |    4 [32m+[m[31m-[m
+ src/App.jsx                                      |   89 [32m+[m[31m-[m
+ src/components/StripePaymentForm.jsx             |  229 [32m++++[m
+ src/components/navigation/PatientHeader.jsx      |  140 [32m+[m[31m--[m
+ src/config/stripe.js                             |   10 [32m+[m
+ src/context/AuthContext.jsx                      |   14 [32m+[m[31m-[m
+ src/context/LanguageContext.jsx                  |   95 [32m+[m[31m-[m
+ src/context/NotificationContext.jsx              |  237 [32m+++++[m
+ src/firebase.js                                  |   23 [32m+[m
+ src/pages/admin/AddPatient.jsx                   |  540 [32m++++++++++[m
+ src/pages/admin/AddStaff.jsx                     |  418 [32m+++++++[m[31m-[m
+ src/pages/admin/AdminDashboard.jsx               | 1243 [32m+++++++++++++++++++[m[31m---[m
+ src/pages/admin/FacilityManagement.jsx           |  133 [32m++[m[31m-[m
+ src/pages/admin/PatientManagement.jsx            |  326 [32m++++++[m
+ src/pages/admin/StaffManagement.jsx              |    3 [32m+[m[31m-[m
+ src/pages/auth/Register.jsx                      |   67 [32m+[m[31m-[m
+ src/pages/doctor/DoctorDashboard.jsx             |   16 [32m+[m[31m-[m
+ src/pages/doctor/DoctorPatientMedicalRecords.jsx |  720 [32m+++++++++++++[m
+ src/pages/doctor/DoctorPatients.jsx              |    6 [32m+[m[31m-[m
+ src/pages/patient/BookAppointment.jsx            |  263 [32m++++[m[31m-[m
+ src/pages/patient/HealthSummary.jsx              |   79 [32m+[m[31m-[m
+ src/pages/patient/PatientAppointments.jsx        |   16 [32m+[m[31m-[m
+ src/pages/patient/PatientBilling.jsx             |  126 [32m+[m[31m--[m
+ src/pages/patient/PatientBillingWrapper.jsx      |   27 [32m+[m
+ src/pages/patient/PatientDashboard.jsx           |   56 [32m+[m[31m-[m
+ src/pages/patient/PatientDetails.jsx             |  529 [32m+++++[m[31m----[m
+ src/pages/patient/PatientMedicalRecords.jsx      |   59 [32m+[m[31m-[m
+ src/pages/patient/PatientPrescriptions.jsx       |   51 [32m+[m[31m-[m
+ src/pages/patient/TestResults.jsx                |   76 [32m+[m[31m-[m
+ src/services/api.js                              |   59 [32m+[m[31m-[m
+ src/services/securityService.js                  |   14 [32m+[m[31m-[m
+ 58 files changed, 7772 insertions(+), 1222 deletions(-)
+
+[33mcommit 6bcaaf5e4b4802c8883b7d263eef5a7680142c98[m
+Author: MR-M@gmail.com <Mr-M@gmail.com>
+Date:   Wed Oct 1 10:40:57 2025 +0200
+
+    Added payments module and updated patient features by MR_M
+
+ README.md                                 |  30 [32m+++[m
+ backend/.env.example                      |   7 [32m+[m
+ backend/models/Appointment.js             |   6 [32m+[m
+ backend/models/Payment.js                 |  20 [32m++[m
+ backend/routes/patientRoutes.js           | 121 [32m+++++++++[m[31m-[m
+ backend/routes/paymentRoutes.js           | 157 [32m+++++++++++++[m
+ backend/server.js                         |   1 [32m+[m
+ package-lock.json                         | 106 [32m++++++++[m[31m-[m
+ package.json                              |   5 [32m+[m[31m-[m
+ src/App.jsx                               |   7 [32m+[m[31m-[m
+ src/components/payments/PayPalButton.jsx  | 354 [32m++++++++++++++++++++++++++++++[m
+ src/context/LanguageContext.jsx           |  86 [31m--------[m
+ src/pages/patient/BookAppointment.jsx     | 306 [32m++++++++++++++++++++++++[m[31m--[m
+ src/pages/patient/PatientAppointments.jsx |   8 [32m+[m[31m-[m
+ src/pages/patient/PatientBilling.jsx      |  49 [32m+++[m[31m--[m
+ src/services/api.js                       | 131 [32m++++++++++[m[31m-[m
+ 16 files changed, 1238 insertions(+), 156 deletions(-)
+
+[33mcommit 2ab62bc84dd6078f5fd1d6aac20f6c9ca84c02db[m
+Author: Student <student@example.com>
+Date:   Mon Aug 4 09:54:02 2025 +0200
+
+     Major Hospital Management System Update
+    
+     Features Added:
+    - Complete multilingual support (11 South African languages)
+    - Professional patient and doctor portals
+    - Advanced appointment booking with email notifications
+    - Comprehensive medical records management
+    - South African Rand (ZAR) currency support
+    - Role-based access control (Patient, Doctor, Nurse, Admin)
+    
+     Technical Improvements:
+    - Migrated from Firebase to MongoDB
+    - Enhanced security with JWT authentication
+    - Email verification system
+    - Responsive Material-UI design
+    - Real-time appointment management
+    - Professional medical-themed UI/UX
+    
+     Cleanup:
+    - Removed Firebase dependencies
+    - Cleaned up obsolete files and components
+    - Updated environment configuration
+    - Enhanced error handling and validation
+    
+     Documentation:
+    - Comprehensive README with setup instructions
+    - Demo accounts for testing
+    - Environment variable templates
+    - Project structure documentation
+    
+     Ready for production deployment with proper security measures
+
+ .gitignore                                         |   41 [32m+[m[31m-[m
+ CLEANUP_SUMMARY.md                                 |  111 [32m++[m
+ DEMO_ACCOUNTS.md                                   |  211 [32m++++[m
+ POST_CLEANUP_VERIFICATION.md                       |  132 [32m++[m
+ PROJECT_PLAN.txt                                   |  128 [31m--[m
+ README.md                                          |  222 [32m+++[m[31m-[m
+ README_REMOVE_PUSH_NOTIFICATION.txt                |   10 [31m-[m
+ REQUIREMENTS_ANALYSIS.md                           |  247 [32m++++[m
+ SRS_Hospital_Management_System.txt                 |  138 [32m++[m
+ SRS_Hospital_Management_System_Part1.txt           |  366 [32m++++++[m
+ SRS_Hospital_Management_System_Part2.txt           |  503 [32m++++++++[m
+ SRS_Hospital_Management_System_Part3.txt           |  548 [32m++++++++[m
+ backend/.env.example                               |   22 [32m+[m
+ backend/models/Appointment.js                      |   17 [32m+[m[31m-[m
+ backend/models/Bill.js                             |   84 [32m++[m
+ backend/models/Chat.js                             |   12 [32m+[m
+ backend/models/Facility.js                         |   13 [32m+[m
+ backend/models/Leave.js                            |  131 [32m++[m
+ backend/models/Message.js                          |   10 [32m+[m
+ backend/models/Notification.js                     |   50 [32m+[m
+ backend/models/Prescription.js                     |   61 [32m+[m
+ backend/models/User.js                             |   26 [32m+[m[31m-[m
+ backend/package-lock.json                          |  135 [32m+[m[31m-[m
+ backend/package.json                               |   10 [32m+[m[31m-[m
+ backend/patchUserIds.js                            |   25 [31m-[m
+ backend/patchUserVerification.js                   |   17 [31m-[m
+ backend/routes/appointmentRoutes.js                |  244 [32m+++[m[31m-[m
+ backend/routes/authRoutes.js                       |   49 [32m+[m[31m-[m
+ backend/routes/chatRoutes.js                       |   71 [32m++[m
+ backend/routes/facilityRoutes.js                   |   69 [32m+[m
+ backend/routes/leaveRoutes.js                      |  327 [32m+++++[m
+ backend/routes/patientRoutes.js                    |  342 [32m+++++[m
+ backend/routes/setPasswordRoutes.js                |   32 [32m+[m
+ backend/routes/userRoutes.js                       |   75 [32m+[m[31m-[m
+ backend/scripts/debugAppointmentEmail.js           |   83 [32m++[m
+ backend/scripts/fixDemoAccountEmails.js            |   81 [32m++[m
+ backend/scripts/seedDemoAccounts.js                |  141 [32m+++[m
+ backend/scripts/seedDemoAccountsAPI.js             |  137 [32m++[m
+ backend/scripts/simpleEmailTest.js                 |   72 [32m++[m
+ backend/scripts/testAppointmentBooking.js          |   83 [32m++[m
+ backend/scripts/testAppointmentEmails.js           |  103 [32m++[m
+ backend/scripts/testEmailService.js                |   62 [32m+[m
+ backend/scripts/testLogin.js                       |   71 [32m++[m
+ backend/scripts/verifyDemoAccounts.js              |   68 [32m+[m
+ backend/seedAppointments.js                        |  137 [32m++[m
+ backend/seedDoctors.js                             |  210 [32m+++[m
+ backend/server.js                                  |   15 [32m+[m[31m-[m
+ backend/services/appointmentEmailService.js        |  306 [32m+++++[m
+ backend/services/appointmentEmailService_new.js    |  329 [32m+++++[m
+ backend/utils/generateToken.js                     |   11 [32m+[m
+ backend/utils/sendEmail.js                         |   24 [32m+[m
+ db.json                                            |  141 [31m---[m
+ firebase.json                                      |   20 [31m-[m
+ firestore.indexes.json                             |   28 [31m-[m
+ firestore.rules                                    |  188 [31m---[m
+ package-lock.json                                  | 1304 [32m++++++[m[31m-------------[m
+ package.json                                       |   10 [32m+[m[31m-[m
+ presentation-slides.md                             |  227 [32m++++[m
+ public/firebase-messaging-sw.js                    |   75 [31m--[m
+ src/App.jsx                                        |  323 [32m+++[m[31m--[m
+ src/components/AppointmentScheduler.jsx            |   66 [31m-[m
+ src/components/BookAppointment.jsx                 |  402 [31m------[m
+ src/components/Chat.jsx                            |  152 [32m+[m[31m--[m
+ src/components/ChatList.jsx                        |  210 [32m+[m[31m--[m
+ src/components/LanguageSelector.jsx                |  188 [32m+++[m
+ src/components/NewChatButton.jsx                   |  149 [32m+[m[31m--[m
+ src/components/dashboard/AppointmentItem.jsx       |   69 [32m+[m
+ src/components/dashboard/DashboardStats.jsx        |   50 [32m+[m
+ src/components/dashboard/StatsCard.jsx             |   22 [32m+[m
+ src/components/dashboard/WelcomeHeader.jsx         |   18 [32m+[m
+ src/components/layout/AdminLayout.jsx              |  119 [32m++[m
+ src/components/layout/DoctorLayout.jsx             |   54 [32m+[m
+ src/components/layout/MainLayout.jsx               |   29 [32m+[m[31m-[m
+ src/components/navigation/DoctorHeader.jsx         |  263 [32m++++[m
+ src/components/navigation/DoctorSidebar.jsx        |  287 [32m+++++[m
+ src/components/navigation/PatientHeader.jsx        |  369 [32m+++++[m[31m-[m
+ src/components/navigation/PatientSidebar.jsx       |  246 [32m++[m[31m--[m
+ .../navigation/PatientSidebar.module.css           |  112 [32m++[m
+ src/components/profile/ActivityLog.jsx             |  152 [32m+++[m
+ src/components/profile/Documents.jsx               |   71 [32m++[m
+ src/components/profile/NotificationSettings.jsx    |  443 [32m+++++++[m
+ src/components/profile/ProfessionalInfo.jsx        |  279 [32m++++[m
+ src/components/profile/ProfileOverview.jsx         |  437 [32m+++++++[m
+ src/components/profile/SecuritySettings.jsx        |  422 [32m+++++++[m
+ src/context/AuthContext.jsx                        |   13 [32m+[m[31m-[m
+ src/context/LanguageContext.jsx                    | 1335 [32m++++++++++++++++++++[m
+ src/pages/Appointments.jsx                         |  311 [31m-----[m
+ src/pages/DoctorAppointments.jsx                   |  167 [31m---[m
+ src/pages/DoctorDashboard.jsx                      |  290 [31m-----[m
+ src/pages/Login.jsx                                |  210 [31m---[m
+ src/pages/Messages.jsx                             |   21 [31m-[m
+ src/pages/Profile.jsx                              |  144 [31m---[m
+ src/pages/TestResults.jsx                          |  302 [31m-----[m
+ src/pages/{ => admin}/AddStaff.jsx                 |   43 [32m+[m[31m-[m
+ src/pages/{ => admin}/AdminDashboard.jsx           |   46 [32m+[m[31m-[m
+ src/pages/{ => admin}/AdminLogin.jsx               |    2 [32m+[m[31m-[m
+ src/pages/admin/FacilityManagement.jsx             |  176 [32m+++[m
+ src/pages/admin/LeaveManagement.jsx                |  535 [32m++++++++[m
+ src/pages/{ => admin}/StaffManagement.jsx          |    2 [32m+[m[31m-[m
+ src/pages/{ => admin}/StaffManagement.module.css   |    0
+ .../admin/widgets/AppointmentStatusWidget.jsx      |   44 [32m+[m
+ src/pages/admin/widgets/PatientStatsWidget.jsx     |   64 [32m+[m
+ src/pages/admin/widgets/PatientTrendsWidget.jsx    |   51 [32m+[m
+ src/pages/admin/widgets/RevenueTrendsWidget.jsx    |   52 [32m+[m
+ src/pages/admin/widgets/RevenueWidget.jsx          |   27 [32m+[m
+ src/pages/admin/widgets/StaffTurnoverWidget.jsx    |   71 [32m++[m
+ src/pages/{ => auth}/ForgotPassword.jsx            |    0
+ src/pages/auth/Login.jsx                           |  419 [32m++++++[m
+ src/pages/auth/Register.jsx                        |  888 [32m+++++++++++++[m
+ src/pages/{ => auth}/ResetPassword.jsx             |    0
+ src/pages/auth/SetPassword.jsx                     |   89 [32m++[m
+ src/pages/{ => auth}/VerifyEmail.jsx               |    9 [32m+[m
+ src/pages/{ => doctor}/DoctorAddAppointment.jsx    |   19 [32m+[m[31m-[m
+ src/pages/doctor/DoctorAppointments.jsx            |  380 [32m++++++[m
+ src/pages/doctor/DoctorDashboard.jsx               |  520 [32m++++++++[m
+ src/pages/doctor/DoctorMessages.jsx                |  645 [32m++++++++++[m
+ src/pages/doctor/DoctorPatients.jsx                |  231 [32m++++[m
+ src/pages/doctor/DoctorProfile.jsx                 |  433 [32m+++++++[m
+ src/pages/{ => nurse}/NurseDashboard.css           |    0
+ src/pages/{ => nurse}/NurseDashboard.jsx           |    5 [32m+[m[31m-[m
+ src/pages/{ => nurse}/Tasks.jsx                    |    8 [32m+[m[31m-[m
+ src/pages/{ => patient}/BookAppointment.jsx        |  188 [32m++[m[31m-[m
+ src/pages/patient/HealthSummary.jsx                |  491 [32m+++++++[m
+ src/pages/{ => patient}/MedicalRecords.jsx         |   61 [32m+[m[31m-[m
+ src/pages/patient/PatientAppointments.jsx          |  551 [32m++++++++[m
+ src/pages/patient/PatientBilling.jsx               |  512 [32m++++++++[m
+ src/pages/patient/PatientDashboard.jsx             |  479 [32m+++++++[m
+ src/pages/{ => patient}/PatientDetails.jsx         |  204 [32m+[m[31m--[m
+ src/pages/patient/PatientMedicalRecords.jsx        |  618 [32m+++++++++[m
+ src/pages/patient/PatientMessages.jsx              |  486 [32m+++++++[m
+ src/pages/{ => patient}/PatientPortal.jsx          |  104 [32m+[m[31m-[m
+ src/pages/patient/PatientPrescriptions.jsx         |  489 [32m+++++++[m
+ src/pages/patient/PatientProfile.jsx               |  591 [32m+++++++++[m
+ src/pages/{ => patient}/PatientRegistration.jsx    |   46 [32m+[m[31m-[m
+ src/pages/patient/PatientSettings.jsx              |  730 [32m+++++++++++[m
+ src/pages/{ => patient}/Prescriptions.jsx          |    4 [32m+[m[31m-[m
+ src/pages/patient/TestPatientDashboard.jsx         |  165 [32m+++[m
+ src/pages/patient/TestResults.jsx                  |  447 [32m+++++++[m
+ src/pages/{ => shared}/Billing.jsx                 |    6 [32m+[m[31m-[m
+ src/pages/{ => shared}/Dashboard.jsx               |    0
+ src/pages/{ => shared}/Doctors.jsx                 |    2 [32m+[m[31m-[m
+ src/pages/shared/Messages.jsx                      |  261 [32m++++[m
+ src/pages/{ => shared}/Patients.jsx                |  107 [32m+[m[31m-[m
+ src/pages/{ => shared}/Pharmacy.jsx                |    6 [32m+[m[31m-[m
+ src/pages/shared/Profile.jsx                       |  164 [32m+++[m
+ src/pages/{ => shared}/Settings.jsx                |    4 [32m+[m[31m-[m
+ src/pages/{ => shared}/Unauthorized.jsx            |    2 [32m+[m[31m-[m
+ src/pages/widgets/AppointmentStatusWidget.jsx      |   40 [31m-[m
+ src/pages/widgets/PatientStatsWidget.jsx           |   39 [31m-[m
+ src/pages/widgets/PatientTrendsWidget.jsx          |   50 [31m-[m
+ src/pages/widgets/RevenueTrendsWidget.jsx          |   50 [31m-[m
+ src/pages/widgets/RevenueWidget.jsx                |   36 [31m-[m
+ src/pages/widgets/StaffTurnoverWidget.jsx          |   53 [31m-[m
+ src/services/api.js                                |  625 [32m+++++[m[31m----[m
+ src/services/authService.js                        |  189 [31m---[m
+ src/services/facilityApi.js                        |   31 [32m+[m
+ src/services/firebaseService.js                    |  173 [31m---[m
+ src/services/messageService.js                     |  155 [32m+++[m
+ vite.config.js                                     |   10 [32m+[m[31m-[m
+ 159 files changed, 23711 insertions(+), 5347 deletions(-)
+
+[33mcommit a58a7e0764d5875a9daa2c61725cda053b0c21da[m
+Author: Student <student@example.com>
+Date:   Mon Apr 28 15:31:14 2025 +0200
+
+    Remove exposed Google API key from source and .env; update to use env variable and add security warning
+
+ public/firebase-messaging-sw.js | 3 [32m++[m[31m-[m
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+[33mcommit 6a73dd9a63e567697ffab4fdad5169fdd0913ab5[m
+Author: Student <student@example.com>
+Date:   Mon Apr 28 15:08:12 2025 +0200
+
+    Add full project README with setup, features, and usage instructions
+
+ README.md | 90 [32m+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++[m[31m----[m
+ 1 file changed, 85 insertions(+), 5 deletions(-)
+
+[33mcommit c01f878c1fb9872e91e123a15f4c46b07413f93d[m
+Author: Student <student@example.com>
+Date:   Mon Apr 28 15:02:54 2025 +0200
+
+    Fix login/registration, userId for all roles, verification for seeded users, and admin login improvements
+
+ .gitignore                                    |   24 [32m+[m
+ DEFAULT_ACCOUNTS.txt                          |   28 [32m+[m
+ PROBLEM_STATEMENT.txt                         |   28 [32m+[m
+ PROJECT_PLAN.md                               |  130 [32m+[m
+ PROJECT_PLAN.txt                              |  128 [32m+[m
+ README.md                                     |    8 [32m+[m
+ README_REMOVE_PUSH_NOTIFICATION.txt           |   10 [32m+[m
+ backend/README.md                             |   31 [32m+[m
+ backend/middleware/auth.js                    |   27 [32m+[m
+ backend/models/Appointment.js                 |   12 [32m+[m
+ backend/models/User.js                        |   36 [32m+[m
+ backend/package-lock.json                     | 1688 [32m++++++[m
+ backend/package.json                          |   22 [32m+[m
+ backend/patchUserIds.js                       |   25 [32m+[m
+ backend/patchUserVerification.js              |   17 [32m+[m
+ backend/routes/appointmentRoutes.js           |  118 [32m+[m
+ backend/routes/authRoutes.js                  |  238 [32m+[m
+ backend/routes/userRoutes.js                  |  115 [32m+[m
+ backend/seedDefaultUsers.js                   |   54 [32m+[m
+ backend/server.js                             |   78 [32m+[m
+ backend/websocket-server.js                   |   36 [32m+[m
+ db.json                                       |  141 [32m+[m
+ eslint.config.js                              |   38 [32m+[m
+ firebase.json                                 |   20 [32m+[m
+ firestore.indexes.json                        |   28 [32m+[m
+ firestore.rules                               |  188 [32m+[m
+ index.html                                    |   13 [32m+[m
+ package-lock.json                             | 7079 [32m+++++++++++++++++++++++++[m
+ package.json                                  |   52 [32m+[m
+ public/favicon.ico                            |    1 [32m+[m
+ public/firebase-messaging-sw.js               |   74 [32m+[m
+ public/serviceWorker.js                       |  230 [32m+[m
+ public/vite.svg                               |    1 [32m+[m
+ src/App.css                                   |   73 [32m+[m
+ src/App.jsx                                   |  340 [32m++[m
+ src/assets/react.svg                          |    1 [32m+[m
+ src/components/AppointmentScheduler.jsx       |   66 [32m+[m
+ src/components/BookAppointment.jsx            |  402 [32m++[m
+ src/components/Chat.jsx                       |  272 [32m+[m
+ src/components/ChatList.jsx                   |  311 [32m++[m
+ src/components/NewAppointmentDialog.jsx       |  425 [32m++[m
+ src/components/NewChatButton.jsx              |  292 [32m+[m
+ src/components/ReviewAndShareModal.jsx        |  290 [32m+[m
+ src/components/ReviewDialog.jsx               |  149 [32m+[m
+ src/components/Sidebar.jsx                    |  144 [32m+[m
+ src/components/billing/CreateInvoiceForm.jsx  |  236 [32m+[m
+ src/components/billing/InvoiceList.jsx        |  226 [32m+[m
+ src/components/billing/PaymentList.jsx        |  219 [32m+[m
+ src/components/error/GlobalErrorBoundary.jsx  |  116 [32m+[m
+ src/components/forms/AppointmentForm.jsx      |  299 [32m++[m
+ src/components/layout/MainLayout.jsx          |  301 [32m++[m
+ src/components/layout/PatientLayout.jsx       |   37 [32m+[m
+ src/components/layout/listItems.jsx           |   76 [32m+[m
+ src/components/loading/SuspenseFallback.jsx   |   48 [32m+[m
+ src/components/navigation/PatientHeader.jsx   |  102 [32m+[m
+ src/components/navigation/PatientSidebar.jsx  |  101 [32m+[m
+ src/components/pharmacy/AddMedicineForm.jsx   |  232 [32m+[m
+ src/components/pharmacy/InventoryList.jsx     |  153 [32m+[m
+ src/components/pharmacy/PrescriptionList.jsx  |  173 [32m+[m
+ src/context/AuthContext.jsx                   |  104 [32m+[m
+ src/context/ErrorContext.jsx                  |  110 [32m+[m
+ src/context/LoadingContext.jsx                |   77 [32m+[m
+ src/context/RealTimeContext.jsx               |   93 [32m+[m
+ src/hooks/useApi.js                           |  128 [32m+[m
+ src/hooks/useQueryHooks.js                    |  221 [32m+[m
+ src/index.css                                 |   94 [32m+[m
+ src/main.jsx                                  |   29 [32m+[m
+ src/pages/AddStaff.jsx                        |  106 [32m+[m
+ src/pages/AdminDashboard.jsx                  |  171 [32m+[m
+ src/pages/AdminLogin.jsx                      |   75 [32m+[m
+ src/pages/Appointments.jsx                    |  311 [32m++[m
+ src/pages/Billing.jsx                         |  137 [32m+[m
+ src/pages/BookAppointment.jsx                 |  321 [32m++[m
+ src/pages/Dashboard.jsx                       |   70 [32m+[m
+ src/pages/DoctorAddAppointment.jsx            |  291 [32m+[m
+ src/pages/DoctorAppointments.jsx              |  167 [32m+[m
+ src/pages/DoctorDashboard.jsx                 |  290 [32m+[m
+ src/pages/Doctors.jsx                         |  163 [32m+[m
+ src/pages/ForgotPassword.jsx                  |   69 [32m+[m
+ src/pages/Login.jsx                           |  210 [32m+[m
+ src/pages/MedicalRecords.jsx                  |  174 [32m+[m
+ src/pages/Messages.jsx                        |   21 [32m+[m
+ src/pages/NurseDashboard.css                  |  119 [32m+[m
+ src/pages/NurseDashboard.jsx                  |  499 [32m++[m
+ src/pages/PatientDetails.jsx                  | 1305 [32m+++++[m
+ src/pages/PatientPortal.jsx                   |  718 [32m+++[m
+ src/pages/PatientRegistration.jsx             |  528 [32m++[m
+ src/pages/Patients.jsx                        |  321 [32m++[m
+ src/pages/Pharmacy.jsx                        |  167 [32m+[m
+ src/pages/Prescriptions.jsx                   |  307 [32m++[m
+ src/pages/Profile.jsx                         |  144 [32m+[m
+ src/pages/ResetPassword.jsx                   |  102 [32m+[m
+ src/pages/Settings.jsx                        |  559 [32m++[m
+ src/pages/StaffManagement.jsx                 |  461 [32m++[m
+ src/pages/StaffManagement.module.css          |    4 [32m+[m
+ src/pages/Tasks.jsx                           |  222 [32m+[m
+ src/pages/TestResults.jsx                     |  302 [32m++[m
+ src/pages/Unauthorized.jsx                    |   76 [32m+[m
+ src/pages/VerifyEmail.jsx                     |   71 [32m+[m
+ src/pages/widgets/AppointmentStatusWidget.jsx |   40 [32m+[m
+ src/pages/widgets/PatientStatsWidget.jsx      |   39 [32m+[m
+ src/pages/widgets/PatientTrendsWidget.jsx     |   50 [32m+[m
+ src/pages/widgets/RevenueTrendsWidget.jsx     |   50 [32m+[m
+ src/pages/widgets/RevenueWidget.jsx           |   36 [32m+[m
+ src/pages/widgets/StaffTurnoverWidget.jsx     |   53 [32m+[m
+ src/services/additionalEmailTemplates.js      |  151 [32m+[m
+ src/services/api.js                           |  614 [32m+++[m
+ src/services/authService.js                   |  189 [32m+[m
+ src/services/emailTemplates.js                |  145 [32m+[m
+ src/services/firebaseService.js               |  173 [32m+[m
+ src/services/queryClient.js                   |   36 [32m+[m
+ src/services/securityService.js               |  183 [32m+[m
+ src/services/websocket.js                     |  111 [32m+[m
+ src/utils/createDefaultUsers.js               |   36 [32m+[m
+ src/utils/passwordStrength.js                 |   19 [32m+[m
+ src/utils/serviceWorkerRegistration.js        |   55 [32m+[m
+ vite.config.js                                |   30 [32m+[m
+ 117 files changed, 27149 insertions(+)
