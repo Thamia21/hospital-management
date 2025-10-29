@@ -26,31 +26,27 @@ import {
   Select,
   MenuItem,
   Tabs,
-  Tab,
-  Snackbar,
-  Alert
+  Tab
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Send as SendIcon,
+  AttachFile as AttachFileIcon,
+  MoreVert as MoreVertIcon,
   Reply as ReplyIcon,
   Delete as DeleteIcon,
   Star as StarIcon,
   StarBorder as StarBorderIcon,
-  Create as CreateIcon,
-  MoreVert as MoreVertIcon,
-  Close as CloseIcon
+  Create as CreateIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 
-const PatientMessages = () => {
+const NurseMessages = () => {
   const { user } = useAuth();
   const [selectedTab, setSelectedTab] = useState(0);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [openCompose, setOpenCompose] = useState(false);
-  const [openViewDialog, setOpenViewDialog] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const [composeData, setComposeData] = useState({
     to: '',
     subject: '',
@@ -61,49 +57,37 @@ const PatientMessages = () => {
   const [messages, setMessages] = useState([
     {
       id: '1',
-      from: 'Dr. Michael Smith',
-      fromEmail: 'michael.smith@hospital.com',
-      subject: 'Your Test Results',
-      preview: 'Your recent blood test results are now available...',
-      body: 'Your recent blood test results are now available for review. All values are within normal ranges. Your cholesterol levels have improved since your last visit. Please continue with your current medication regimen. If you have any questions, feel free to reach out.',
-      timestamp: '2025-10-29T11:30:00Z',
+      from: 'Dr. Sarah Smith',
+      fromEmail: 'sarah.smith@hospital.com',
+      subject: 'Patient John Doe - Medication Update',
+      preview: 'Please administer the new medication as prescribed...',
+      body: 'Please administer the new medication as prescribed. The patient should receive 500mg of Amoxicillin twice daily for the next 7 days. Monitor for any adverse reactions.',
+      timestamp: '2025-10-29T10:30:00Z',
       read: false,
       starred: false,
       type: 'inbox'
     },
     {
       id: '2',
-      from: 'Nurse Mary Johnson',
-      fromEmail: 'mary.johnson@hospital.com',
-      subject: 'Appointment Reminder',
-      preview: 'This is a reminder for your upcoming appointment...',
-      body: 'This is a reminder for your upcoming appointment on November 2nd at 10:00 AM with Dr. Michael Smith. Please arrive 15 minutes early to complete any necessary paperwork. Remember to bring your insurance card and a list of current medications.',
-      timestamp: '2025-10-28T14:20:00Z',
+      from: 'Admin Department',
+      fromEmail: 'admin@hospital.com',
+      subject: 'Shift Schedule Update',
+      preview: 'Your shift schedule for next week has been updated...',
+      body: 'Your shift schedule for next week has been updated. Please check the schedule board for details. You are assigned to ICU ward from Monday to Friday, 7 AM - 3 PM.',
+      timestamp: '2025-10-29T08:15:00Z',
       read: true,
       starred: true,
       type: 'inbox'
     },
     {
       id: '3',
-      from: 'Admin Department',
-      fromEmail: 'admin@hospital.com',
-      subject: 'Billing Statement Available',
-      preview: 'Your billing statement for October is now available...',
-      body: 'Your billing statement for October is now available in your patient portal. You can view and download the statement from the Billing section. If you have any questions about your bill, please contact our billing department at (555) 123-4567.',
-      timestamp: '2025-10-27T09:15:00Z',
+      from: 'Dr. Michael Johnson',
+      fromEmail: 'michael.johnson@hospital.com',
+      subject: 'Ward Round Notes',
+      preview: 'Please review the ward round notes for today...',
+      body: 'Please review the ward round notes for today and update patient records accordingly. Special attention needed for patients in rooms 101 and 205.',
+      timestamp: '2025-10-28T16:45:00Z',
       read: true,
-      starred: false,
-      type: 'inbox'
-    },
-    {
-      id: '4',
-      from: 'Pharmacy Department',
-      fromEmail: 'pharmacy@hospital.com',
-      subject: 'Prescription Ready for Pickup',
-      preview: 'Your prescription is ready for pickup at our pharmacy...',
-      body: 'Your prescription is ready for pickup at our pharmacy. Pharmacy hours are Monday-Friday 8 AM - 6 PM, Saturday 9 AM - 2 PM. Please bring a valid ID when picking up your medication. If you have any questions, call us at (555) 123-4568.',
-      timestamp: '2025-10-26T16:45:00Z',
-      read: false,
       starred: false,
       type: 'inbox'
     }
@@ -116,7 +100,6 @@ const PatientMessages = () => {
 
   const handleMessageClick = (message) => {
     setSelectedMessage(message);
-    setOpenViewDialog(true);
     // Mark as read
     setMessages(messages.map(m => 
       m.id === message.id ? { ...m, read: true } : m
@@ -135,14 +118,8 @@ const PatientMessages = () => {
   };
 
   const handleSendMessage = () => {
-    if (!composeData.to || !composeData.subject || !composeData.message) {
-      setSnackbar({ open: true, message: 'Please fill in all fields', severity: 'error' });
-      return;
-    }
-
     // In production, this would send via API
     console.log('Sending message:', composeData);
-    setSnackbar({ open: true, message: 'Message sent successfully!', severity: 'success' });
     setOpenCompose(false);
     setComposeData({ to: '', subject: '', message: '' });
   };
@@ -181,7 +158,7 @@ const PatientMessages = () => {
             Messages
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Communicate with your healthcare providers
+            Communicate with doctors and staff
           </Typography>
         </Box>
         <Button
@@ -323,80 +300,11 @@ const PatientMessages = () => {
             </List>
           </Paper>
         </Grid>
-      </Grid>
 
-      {/* Compose Dialog */}
-      <Dialog open={openCompose} onClose={() => setOpenCompose(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">New Message</Typography>
-            <IconButton onClick={() => setOpenCompose(false)} size="small">
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ pt: 2 }}>
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>To</InputLabel>
-              <Select
-                name="to"
-                value={composeData.to}
-                onChange={handleComposeChange}
-                label="To"
-              >
-                <MenuItem value="dr.smith@hospital.com">Dr. Michael Smith</MenuItem>
-                <MenuItem value="nurse.mary@hospital.com">Nurse Mary Johnson</MenuItem>
-                <MenuItem value="admin@hospital.com">Admin Department</MenuItem>
-                <MenuItem value="billing@hospital.com">Billing Department</MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              fullWidth
-              label="Subject"
-              name="subject"
-              value={composeData.subject}
-              onChange={handleComposeChange}
-              sx={{ mb: 3 }}
-            />
-
-            <TextField
-              fullWidth
-              label="Message"
-              name="message"
-              value={composeData.message}
-              onChange={handleComposeChange}
-              multiline
-              rows={8}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button onClick={() => setOpenCompose(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            startIcon={<SendIcon />}
-            onClick={handleSendMessage}
-          >
-            Send
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* View Message Dialog */}
-      <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Message Details</Typography>
-            <IconButton onClick={() => setOpenViewDialog(false)} size="small">
-              <CloseIcon />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent dividers>
-          {selectedMessage && (
-            <Box>
+        {/* Message Detail */}
+        {selectedMessage && (
+          <Grid item xs={12} md={7}>
+            <Paper sx={{ p: 3 }}>
               <Box sx={{ mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -446,31 +354,63 @@ const PatientMessages = () => {
                   Forward
                 </Button>
               </Box>
-            </Box>
-          )}
+            </Paper>
+          </Grid>
+        )}
+      </Grid>
+
+      {/* Compose Dialog */}
+      <Dialog open={openCompose} onClose={() => setOpenCompose(false)} maxWidth="md" fullWidth>
+        <DialogTitle>New Message</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ pt: 2 }}>
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel>To</InputLabel>
+              <Select
+                name="to"
+                value={composeData.to}
+                onChange={handleComposeChange}
+                label="To"
+              >
+                <MenuItem value="dr.smith@hospital.com">Dr. Sarah Smith</MenuItem>
+                <MenuItem value="dr.johnson@hospital.com">Dr. Michael Johnson</MenuItem>
+                <MenuItem value="admin@hospital.com">Admin Department</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              label="Subject"
+              name="subject"
+              value={composeData.subject}
+              onChange={handleComposeChange}
+              sx={{ mb: 3 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Message"
+              name="message"
+              value={composeData.message}
+              onChange={handleComposeChange}
+              multiline
+              rows={8}
+            />
+          </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenViewDialog(false)}>Close</Button>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setOpenCompose(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<SendIcon />}
+            onClick={handleSendMessage}
+          >
+            Send
+          </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={() => setSnackbar({ ...snackbar, open: false })} 
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
 
-export default PatientMessages;
+export default NurseMessages;

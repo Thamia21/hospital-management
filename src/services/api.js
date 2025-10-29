@@ -68,6 +68,32 @@ export const userService = {
     return res.data;
   },
 
+  async getPatients() {
+    try {
+      const res = await axios.get(`${API_URL}/users?role=PATIENT`, { headers: getAuthHeader() });
+      return res.data;
+    } catch (error) {
+      console.error('Error fetching patients:', error);
+      return [];
+    }
+  },
+
+  async getNursePatients(nurseId) {
+    try {
+      // Fetch patients assigned to this specific nurse
+      // Backend should return patients based on:
+      // 1. Appointments with this nurse
+      // 2. Patients in nurse's ward/unit
+      // 3. Patients referred to this nurse
+      const res = await axios.get(`${API_URL}/nurses/${nurseId}/patients`, { headers: getAuthHeader() });
+      return res.data;
+    } catch (error) {
+      console.error('Error fetching nurse patients:', error);
+      // Fallback to all patients if endpoint doesn't exist yet
+      return this.getPatients();
+    }
+  },
+
   async getDoctorDashboardStats(doctorId, facilityId) {
     const userRes = await axios.get(`${API_URL}/users/${doctorId}`, { headers: getAuthHeader() });
     const doctorData = userRes.data;

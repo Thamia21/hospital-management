@@ -20,7 +20,10 @@ import {
   DialogActions,
   TextField,
   Grid,
-  Alert
+  Alert,
+  Card,
+  CardContent,
+  Avatar
 } from '@mui/material';
 import { MoreVert as MoreVertIcon, Schedule as ScheduleIcon, Cancel as CancelIcon, CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -136,113 +139,146 @@ const RescheduleDialog = ({ open, onClose, appointment, onReschedule }) => {
   );
 };
 
-const AppointmentItem = ({ appointment, onStatusUpdate, onReschedule }) => {
+const AppointmentCard = ({ appointment, onStatusUpdate, onReschedule }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
-  const open = Boolean(anchorEl);
+  const menuOpen = Boolean(anchorEl);
 
-  const handleClick = (event) => {
+  const handleMenuClick = (event) => {
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
   };
 
-  const handleClose = () => {
+  const handleMenuClose = () => {
     setAnchorEl(null);
-  };
-
-  const handleStatusChange = (status) => {
-    onStatusUpdate(appointment._id || appointment.id, status);
-    handleClose();
   };
 
   const handleRescheduleClick = () => {
     setRescheduleOpen(true);
-    handleClose();
+    handleMenuClose();
   };
 
+  const handleStatusChange = (status) => {
+    onStatusUpdate(appointment._id || appointment.id, status);
+    handleMenuClose();
+  };
+
+  const statusColor = {
+    CONFIRMED: '#4caf50',
+    COMPLETED: '#1976d2',
+    CANCELLED: '#f44336',
+    PENDING: '#ff9800',
+  }[appointment.status] || '#1976d2';
+
   return (
-    <>
-      <ListItem
-        secondaryAction={
-          <IconButton edge="end" onClick={handleClick}>
-            <MoreVertIcon />
-          </IconButton>
-        }
+    <Grid item xs={12} md={6}>
+      <Card
+        sx={{
+          borderRadius: 4,
+          boxShadow: 8,
+          minHeight: 180,
+          background: 'linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%)',
+          p: 0,
+          position: 'relative',
+          borderLeft: `8px solid ${statusColor}`,
+          transition: 'transform 0.18s cubic-bezier(.4,2,.6,1), box-shadow 0.18s',
+          '&:hover': {
+            transform: 'translateY(-6px) scale(1.03)',
+            boxShadow: 16,
+          },
+        }}
       >
-        <ListItemText
-          primary={
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="subtitle1">
-                {appointment.patientId?.name || appointment.patientName || 'Patient Name Not Available'}
-              </Typography>
-              <Chip
-                size="small"
-                label={appointment.status || 'PENDING'}
-                color={statusColors[appointment.status] || 'default'}
-              />
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+              <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56, fontSize: 26, boxShadow: 2, flexShrink: 0 }}>
+                {appointment.patientId?.name?.charAt(0)?.toUpperCase() || 'P'}
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.19rem', mb: 0.5, wordBreak: 'break-word' }}>
+                  {appointment.patientId?.name || appointment.patientName || 'Patient Name Not Available'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
+                  {(() => {
+                    const email = appointment.patientId?.email || appointment.patientEmail;
+                    return email ? email : '';
+                  })()}
+                </Typography>
+              </Box>
             </Box>
-          }
-          secondary={
-            <>
-              <Typography component="span" variant="body2">
-                Time: {(() => {
-                  try {
-                    return format(new Date(appointment.date), 'h:mm a');
-                  } catch (error) {
-                    console.warn('Error formatting appointment time:', appointment.date, error);
-                    return 'Time not available';
-                  }
-                })()}
-              </Typography>
-              <br />
-              <Typography component="span" variant="body2" color="text.secondary">
-                Email: {appointment.patientId?.email || appointment.patientEmail || 'Email not available'}
-              </Typography>
-              <br />
-              <Typography component="span" variant="body2" color="text.secondary">
-                Phone: {appointment.patientId?.phone || appointment.patientPhone || 'Phone not available'}
-              </Typography>
-              <br />
-              <Typography component="span" variant="body2" color="text.secondary">
-                Reason: {appointment.reason || 'No reason provided'}
-              </Typography>
-            </>
-          }
+            <Chip
+              label={appointment.status || 'PENDING'}
+              sx={{
+                background: statusColor,
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                px: 1.5,
+                py: 0.5,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                borderRadius: 2,
+                boxShadow: 2,
+                flexShrink: 0,
+              }}
+              icon={<ScheduleIcon sx={{ color: '#fff', fontSize: 18 }} />}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+            <ScheduleIcon sx={{ color: statusColor, fontSize: 22 }}/>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: statusColor, letterSpacing: 1 }}>
+              {(() => {
+                try {
+                  return format(new Date(appointment.date), 'h:mm a');
+                } catch (error) {
+                  return 'Time not available';
+                }
+              })()} {appointment.time ? `(${appointment.time})` : ''}
+            </Typography>
+          </Box>
+          <Typography variant="body1" sx={{ mb: 1, fontWeight: 500 }}>
+            <strong>Reason:</strong> {appointment.reason || 'No reason provided'}
+          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+            <IconButton onClick={handleMenuClick}>
+              <MoreVertIcon />
+            </IconButton>
+          </Box>
+        </CardContent>
+        <Menu
+          anchorEl={anchorEl}
+          open={menuOpen}
+          onClose={handleMenuClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+        >
+          <MenuItem onClick={handleRescheduleClick}>
+            <ScheduleIcon sx={{ mr: 1, color: 'primary.main' }} />
+            Reschedule
+          </MenuItem>
+          <MenuItem onClick={() => handleStatusChange('COMPLETED')}>
+            <CheckCircleIcon sx={{ mr: 1, color: 'success.main' }} />
+            Mark as Completed
+          </MenuItem>
+          <MenuItem onClick={() => handleStatusChange('CANCELLED')}>
+            <CancelIcon sx={{ mr: 1, color: 'error.main' }} />
+            Cancel Appointment
+          </MenuItem>
+        </Menu>
+        <RescheduleDialog
+          open={rescheduleOpen}
+          onClose={() => setRescheduleOpen(false)}
+          appointment={appointment}
+          onReschedule={onReschedule}
         />
-      </ListItem>
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-      >
-        <MenuItem onClick={handleRescheduleClick}>
-          <ScheduleIcon sx={{ mr: 1, color: 'primary.main' }} />
-          Reschedule
-        </MenuItem>
-        <MenuItem onClick={() => handleStatusChange('COMPLETED')}>
-          <CheckCircleIcon sx={{ mr: 1, color: 'success.main' }} />
-          Mark as Completed
-        </MenuItem>
-        <MenuItem onClick={() => handleStatusChange('CANCELLED')}>
-          <CancelIcon sx={{ mr: 1, color: 'error.main' }} />
-          Cancel Appointment
-        </MenuItem>
-      </Menu>
-      <RescheduleDialog
-        open={rescheduleOpen}
-        onClose={() => setRescheduleOpen(false)}
-        appointment={appointment}
-        onReschedule={onReschedule}
-      />
-      <Divider />
-    </>
+      </Card>
+    </Grid>
   );
 };
 
@@ -335,7 +371,9 @@ export default function DoctorAppointments() {
         My Appointments
       </Typography>
 
-      {Object.entries(appointments || {}).map(([date, dayAppointments]) => {
+      {Object.entries(appointments || {})
+        .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+        .map(([date, dayAppointments]) => {
         let formattedDate;
         try {
           formattedDate = format(parseISO(date), 'EEEE, MMMM d, yyyy');
@@ -345,23 +383,26 @@ export default function DoctorAppointments() {
         }
         
         return (
-          <Paper key={date} sx={{ mb: 3, overflow: 'hidden' }}>
-            <Box sx={{ bgcolor: 'primary.main', color: 'primary.contrastText', px: 2, py: 1 }}>
-              <Typography variant="h6">
+          <Box key={date} sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 1 }}>
+              <ScheduleIcon sx={{ color: 'primary.main', fontSize: 28 }}/>
+              <Typography variant="h6" sx={{ color: 'primary.main', fontWeight: 700, letterSpacing: 1 }}>
                 {formattedDate}
               </Typography>
             </Box>
-            <List disablePadding>
-              {dayAppointments.map((appointment, index) => (
-                <AppointmentItem
-                  key={appointment._id || appointment.id || `${date}-${index}`}
-                  appointment={appointment}
-                  onStatusUpdate={handleStatusUpdate}
-                  onReschedule={handleReschedule}
-                />
-              ))}
-            </List>
-          </Paper>
+            <Grid container spacing={4}>
+              {[...dayAppointments]
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map((appointment, index) => (
+                  <AppointmentCard
+                    key={appointment._id || appointment.id || `${date}-${index}`}
+                    appointment={appointment}
+                    onStatusUpdate={handleStatusUpdate}
+                    onReschedule={handleReschedule}
+                  />
+                ))}
+            </Grid>
+          </Box>
         );
       })}
 

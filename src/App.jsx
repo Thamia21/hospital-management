@@ -23,6 +23,7 @@ import MainLayout from './components/layout/MainLayout';
 import PatientLayout from './components/layout/PatientLayout';
 import DoctorLayout from './components/layout/DoctorLayout';
 import AdminLayout from './components/layout/AdminLayout';
+import NurseLayout from './components/nurse/NurseLayout';
 import SuspenseFallback from './components/loading/SuspenseFallback';
 
 // Auth Pages
@@ -41,6 +42,9 @@ import FacilityManagement from './pages/admin/FacilityManagement';
 import LeaveManagement from './pages/admin/LeaveManagement';
 import PatientManagement from './pages/admin/PatientManagement';
 import AddPatient from './pages/admin/AddPatient';
+import AdminProfile from './pages/admin/AdminProfile';
+import AdminReports from './pages/admin/AdminReports';
+import AdminMessages from './pages/admin/AdminMessages';
 
 // Doctor Pages
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
@@ -52,6 +56,12 @@ import DoctorPatientMedicalRecords from './pages/doctor/DoctorPatientMedicalReco
 
 // Nurse Pages
 import NurseDashboard from './pages/nurse/NurseDashboard';
+import NurseAppointments from './pages/nurse/NurseAppointments';
+import NursePatients from './pages/nurse/NursePatients';
+import NurseTasks from './pages/nurse/NurseTasks';
+import NurseMedicalRecords from './pages/nurse/NurseMedicalRecords';
+import NurseMessages from './pages/nurse/NurseMessages';
+import NurseProfile from './pages/nurse/NurseProfile';
 import Tasks from './pages/nurse/Tasks';
 
 // Patient Pages
@@ -296,6 +306,30 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/profile"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AdminProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AdminReports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/messages"
+          element={
+            <ProtectedRoute allowedRoles={["ADMIN"]}>
+              <AdminMessages />
+            </ProtectedRoute>
+          }
+        />
       </Route>
       <Route path="/unauthorized" element={<Unauthorized />} />
       {/* Messages Routes */}
@@ -314,18 +348,11 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
-        {/* Nurse Dashboard */}
-        <Route path="/nurse-dashboard" element={
-          <ProtectedRoute allowedRoles={['NURSE']}>
-            <NurseDashboard />
-          </ProtectedRoute>
-        } />
-
         {/* Appointments route for patients is defined in the PatientLayout section */}
         {/* Appointments for admin/nurses is handled by the doctor-appointments route */}
 
         <Route path="/patients" element={
-          <ProtectedRoute allowedRoles={['ADMIN', 'NURSE']}>
+          <ProtectedRoute allowedRoles={['ADMIN']}>
             <Patients />
           </ProtectedRoute>
         } />
@@ -349,18 +376,53 @@ function AppRoutes() {
             <Settings />
           </ProtectedRoute>
         } />
-        <Route path="/tasks" element={
+        {/* Old nurse routes removed - now using NurseLayout routes with sidebar */}
+      </Route>
+      <Route path="/set-password" element={<SetPassword />} />
+
+      {/* Nurse Routes with NurseLayout */}
+      <Route element={<NurseLayout />}>
+        <Route path="/nurse-dashboard" element={
           <ProtectedRoute allowedRoles={['NURSE']}>
-            <Tasks />
+            <NurseDashboard />
           </ProtectedRoute>
         } />
-        <Route path="/medical-records" element={
+        <Route path="/nurse-appointments" element={
           <ProtectedRoute allowedRoles={['NURSE']}>
-            <MedicalRecords />
+            <NurseAppointments />
+          </ProtectedRoute>
+        } />
+        <Route path="/nurse-patients" element={
+          <ProtectedRoute allowedRoles={['NURSE']}>
+            <NursePatients />
+          </ProtectedRoute>
+        } />
+        <Route path="/nurse-tasks" element={
+          <ProtectedRoute allowedRoles={['NURSE']}>
+            <NurseTasks />
+          </ProtectedRoute>
+        } />
+        <Route path="/nurse-medical-records" element={
+          <ProtectedRoute allowedRoles={['NURSE']}>
+            <NurseMedicalRecords />
+          </ProtectedRoute>
+        } />
+        <Route path="/nurse-messages" element={
+          <ProtectedRoute allowedRoles={['NURSE']}>
+            <NurseMessages />
+          </ProtectedRoute>
+        } />
+        <Route path="/nurse-profile" element={
+          <ProtectedRoute allowedRoles={['NURSE']}>
+            <NurseProfile />
+          </ProtectedRoute>
+        } />
+        <Route path="/nurse-settings" element={
+          <ProtectedRoute allowedRoles={['NURSE']}>
+            <Settings />
           </ProtectedRoute>
         } />
       </Route>
-      <Route path="/set-password" element={<SetPassword />} />
 
       {/* Doctor Routes */}
       <Route element={<DoctorLayout />}>

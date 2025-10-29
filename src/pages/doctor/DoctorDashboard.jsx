@@ -373,12 +373,12 @@ const DoctorDashboard = () => {
                       </ListItemAvatar>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                            <Box component="span" sx={{ fontWeight: 600, fontSize: '1rem' }}>
                               {appointment.patientId?.name ||
                                (appointment.patientId && typeof appointment.patientId === 'object' && appointment.patientId.email) ||
                                (typeof appointment.patientId === 'string' ? appointment.patientId : 'Patient')}
-                            </Typography>
+                            </Box>
                             <Chip 
                               label={appointment.status}
                               size="small"
@@ -391,19 +391,19 @@ const DoctorDashboard = () => {
                           </Box>
                         }
                         secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
+                          <Box component="span">
+                            <Box component="span" sx={{ display: 'block', fontSize: '0.875rem', color: 'text.secondary' }}>
                               {formatAppointmentTime(appointment.date)} • {formatAppointmentDate(appointment.date)}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                            </Box>
+                            <Box component="span" sx={{ display: 'block', fontSize: '0.875rem', color: 'text.secondary', mt: 0.5 }}>
                               <strong>Reason:</strong> {appointment.reason}
-                            </Typography>
+                            </Box>
                             {appointment.patientId?.email && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                              <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
                                 <EmailIcon sx={{ fontSize: 14 }} />
-                                <Typography variant="caption" color="text.secondary">
+                                <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                                   {appointment.patientId.email}
-                                </Typography>
+                                </Box>
                               </Box>
                             )}
                           </Box>

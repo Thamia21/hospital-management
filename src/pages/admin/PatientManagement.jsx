@@ -32,13 +32,17 @@ const PatientManagement = () => {
 
   const fetchPatients = async () => {
     setLoading(true);
+    setError('');
     try {
-      const res = await axios.get('/api/users?role=PATIENT', {
+      console.log('Fetching patients with token:', token ? 'Present' : 'Missing');
+      const res = await axios.get('http://localhost:5000/api/users?role=PATIENT', {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('Patients fetched:', res.data.length);
       setPatients(res.data);
     } catch (err) {
-      setError('Failed to fetch patients.');
+      console.error('Failed to fetch patients:', err);
+      setError(err.response?.data?.error || 'Failed to fetch patients. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -46,12 +50,12 @@ const PatientManagement = () => {
 
   const fetchFacilities = async () => {
     try {
-      const res = await axios.get('/api/facilities', {
+      const res = await axios.get('http://localhost:5000/api/facilities', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setFacilities(res.data);
     } catch (err) {
-      console.error('Failed to fetch facilities');
+      console.error('Failed to fetch facilities:', err);
     }
   };
 
@@ -70,12 +74,13 @@ const PatientManagement = () => {
     });
     if (!confirm.isConfirmed) return;
     try {
-      await axios.delete(`/api/users/${patientId}`, {
+      await axios.delete(`http://localhost:5000/api/users/${patientId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchPatients();
       Swal.fire('Deleted!', 'Patient record deleted.', 'success');
     } catch (err) {
+      console.error('Failed to delete patient:', err);
       Swal.fire('Error', 'Failed to delete patient.', 'error');
     }
   };

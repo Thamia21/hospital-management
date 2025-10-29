@@ -1,643 +1,474 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Box, 
-  Typography, 
-  List, 
-  ListItem, 
-  ListItemIcon,
-  ListItemText, 
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Paper,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemAvatar,
+  ListItemText,
+  Avatar,
   Divider,
-  Badge,
-  IconButton,
   TextField,
   InputAdornment,
-  Avatar,
-  Drawer,
-  useTheme,
-  useMediaQuery,
+  IconButton,
+  Badge,
+  Chip,
   Button,
-  CircularProgress
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Grid,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Tabs,
+  Tab,
+  Snackbar,
+  Alert
 } from '@mui/material';
-import { 
+import {
   Search as SearchIcon,
-  Menu as MenuIcon,
-  AttachFile as AttachFileIcon, 
-  InsertEmoticon as InsertEmoticonIcon,
-  ArrowBack as ArrowBackIcon,
-  MoreVert as MoreVertIcon,
   Send as SendIcon,
-  Inbox as InboxIcon,
-  Star as StarIcon,
+  Reply as ReplyIcon,
   Delete as DeleteIcon,
-  Message as MessageIcon
+  Star as StarIcon,
+  StarBorder as StarBorderIcon,
+  Create as CreateIcon,
+  MoreVert as MoreVertIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { format } from 'date-fns';
-
-const drawerWidth = 280;
-
-// Mock data for patients (in a real app, this would come from an API)
-const mockPatients = [
-  { 
-    id: 'p1', 
-    name: 'John Doe', 
-    avatar: '/path/to/avatar1.jpg', 
-    status: 'online', 
-    lastSeen: '2m ago',
-    unread: 3 
-  },
-  { 
-    id: 'p2', 
-    name: 'Jane Smith', 
-    avatar: '/path/to/avatar2.jpg', 
-    status: 'offline', 
-    lastSeen: '1h ago',
-    unread: 0 
-  },
-  { 
-    id: 'p3', 
-    name: 'Robert Johnson', 
-    avatar: '/path/to/avatar3.jpg', 
-    status: 'online', 
-    lastSeen: '5m ago',
-    unread: 1 
-  },
-];
 
 const DoctorMessages = () => {
   const { user } = useAuth();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedMessage, setSelectedMessage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = React.useRef(null);
-  
-  // Custom ListItemAvatar component since we're not importing it from MUI
-  const ListItemAvatar = ({ children }) => (
-    <Box sx={{ minWidth: 56, display: 'flex', alignItems: 'center' }}>
-      {children}
-    </Box>
-  );
-  
-  // Custom Menu component for the mobile drawer toggle
-  const MenuIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-    </svg>
-  );
+  const [openCompose, setOpenCompose] = useState(false);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [composeData, setComposeData] = useState({
+    to: '',
+    subject: '',
+    message: ''
+  });
 
-  // Get current patient data
-  const currentPatient = mockPatients.find(p => p.id === selectedPatient);
-  
-  // Filter patients based on search query
-  const filteredPatients = mockPatients.filter(patient =>
-    patient.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Mock conversations for each patient
-  const conversations = mockPatients.map(patient => ({
-    partnerId: patient.id,
-    unreadCount: patient.unread,
-    lastMessage: {
-      text: 'Last message preview...',
-      time: '2:30 PM',
-      sender: 'patient'
+  // Mock messages data
+  const [messages, setMessages] = useState([
+    {
+      id: '1',
+      from: 'Nurse Mary Johnson',
+      fromEmail: 'mary.johnson@hospital.com',
+      subject: 'Patient Update - Room 205',
+      preview: 'Patient in room 205 showing improvement after treatment...',
+      body: 'Patient in room 205 showing improvement after treatment. Vital signs are stable. Blood pressure: 120/80, Heart rate: 72 BPM. Patient is responding well to medication. Please review when you have a moment.',
+      timestamp: '2025-10-29T14:30:00Z',
+      read: false,
+      starred: false,
+      type: 'inbox'
+    },
+    {
+      id: '2',
+      from: 'Admin Department',
+      fromEmail: 'admin@hospital.com',
+      subject: 'Schedule Change Notification',
+      preview: 'Your schedule for next week has been updated...',
+      body: 'Your schedule for next week has been updated. Please review the changes in the schedule management system. You have been assigned to the cardiology department from Monday to Wednesday, 8 AM - 4 PM.',
+      timestamp: '2025-10-29T10:15:00Z',
+      read: true,
+      starred: true,
+      type: 'inbox'
+    },
+    {
+      id: '3',
+      from: 'Patient John Doe',
+      fromEmail: 'john.doe@example.com',
+      subject: 'Follow-up Appointment Request',
+      preview: 'I would like to schedule a follow-up appointment...',
+      body: 'I would like to schedule a follow-up appointment to discuss my recent test results. I am available next week on Tuesday or Thursday afternoon. Please let me know what works best for your schedule.',
+      timestamp: '2025-10-28T16:45:00Z',
+      read: true,
+      starred: false,
+      type: 'inbox'
+    },
+    {
+      id: '4',
+      from: 'Lab Department',
+      fromEmail: 'lab@hospital.com',
+      subject: 'Lab Results Ready - Patient #12345',
+      preview: 'Lab results for patient #12345 are now available...',
+      body: 'Lab results for patient #12345 are now available for review in the system. All tests completed successfully. Please review at your earliest convenience.',
+      timestamp: '2025-10-28T09:20:00Z',
+      read: false,
+      starred: false,
+      type: 'inbox'
     }
-  }));
+  ]);
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedPatient) return;
-    
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      text: newMessage,
-      sender: 'd1', // Doctor's ID
-      timestamp: new Date().toISOString(),
-      read: true
-    };
-    
-    setMessages([...messages, newMsg]);
-    setNewMessage('');
-    
-    // In a real app, you would send the message to the server here
-    // await messageService.sendMessage(selectedPatient, newMessage);
-    
-    // Scroll to bottom after sending a message
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+  const handleTabChange = (event, newValue) => {
+    setSelectedTab(newValue);
+    setSelectedMessage(null);
   };
 
-  // Load messages when a patient is selected
-  React.useEffect(() => {
-    if (!selectedPatient) return;
-    
-    const loadMessages = async () => {
-      setIsLoading(true);
-      try {
-        // In a real app, you would fetch messages from the server
-        // const messages = await messageService.getMessages(selectedPatient);
-        // setMessages(messages);
-        
-        // Mock messages for demo
-        setTimeout(() => {
-          setMessages([
-            {
-              id: '1',
-              text: 'Hello Doctor, I have been experiencing headaches for the past few days.',
-              sender: selectedPatient,
-              timestamp: new Date(Date.now() - 3600000).toISOString(),
-              read: true
-            },
-            {
-              id: '2',
-              text: 'I see. Can you describe the pain on a scale of 1-10?',
-              sender: 'd1',
-              timestamp: new Date(Date.now() - 1800000).toISOString(),
-              read: true
-            },
-            {
-              id: '3',
-              text: 'I would say it\'s about a 6. It\'s a constant dull ache.',
-              sender: selectedPatient,
-              timestamp: new Date(Date.now() - 600000).toISOString(),
-              read: false
-            }
-          ]);
-          setIsLoading(false);
-        }, 500);
-      } catch (error) {
-        console.error('Error loading messages:', error);
-        setIsLoading(false);
-      }
-    };
-    
-    loadMessages();
-  }, [selectedPatient]);
-  
-  // Scroll to bottom when messages change
-  React.useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+  const handleMessageClick = (message) => {
+    setSelectedMessage(message);
+    setOpenViewDialog(true);
+    // Mark as read
+    setMessages(messages.map(m => 
+      m.id === message.id ? { ...m, read: true } : m
+    ));
   };
 
-  const folders = [
-    { id: 'inbox', label: 'Inbox', icon: <InboxIcon />, count: 3 },
-    { id: 'sent', label: 'Sent', icon: <SendIcon /> },
-    { id: 'starred', label: 'Starred', icon: <StarIcon /> },
-    { id: 'trash', label: 'Trash', icon: <DeleteIcon /> },
-  ];
+  const handleStarToggle = (messageId) => {
+    setMessages(messages.map(m => 
+      m.id === messageId ? { ...m, starred: !m.starred } : m
+    ));
+  };
 
-  const [selectedFolder, setSelectedFolder] = useState('inbox');
+  const handleComposeChange = (e) => {
+    const { name, value } = e.target;
+    setComposeData(prev => ({ ...prev, [name]: value }));
+  };
 
-  const drawer = (
-    <div>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h6" noWrap component="div">
-          Messages
-        </Typography>
-      </Box>
-      <Box sx={{ p: 2 }}>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="Search patients..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Box>
-      <List>
-        {folders.map((folder) => (
-          <ListItem 
-            button 
-            key={folder.id}
-            selected={selectedFolder === folder.id}
-            onClick={() => setSelectedFolder(folder.id)}
-          >
-            <ListItemIcon>
-              {folder.icon}
-            </ListItemIcon>
-            <ListItemText primary={folder.label} />
-            {folder.count > 0 && (
-              <Badge badgeContent={folder.count} color="primary" />
-            )}
-          </ListItem>
-        ))}
-      </List>
-      <Divider />
-      <Box sx={{ p: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Quick Actions
-        </Typography>
-        <List>
-          <ListItem button>
-            <ListItemIcon>
-              <MessageIcon />
-            </ListItemIcon>
-            <ListItemText primary="New Message" />
-          </ListItem>
-        </List>
-      </Box>
-      <Divider />
-      <Box sx={{ p: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-          Patients
-        </Typography>
-        <List sx={{ maxHeight: '50vh', overflow: 'auto' }}>
-          {filteredPatients.map((patient) => {
-            const unreadCount = conversations.find(c => c.partnerId === patient.id)?.unreadCount || 0;
-            const lastMessage = conversations.find(c => c.partnerId === patient.id)?.lastMessage;
-            
-            return (
-              <ListItem 
-                button 
-                key={patient.id}
-                selected={selectedPatient === patient.id}
-                onClick={() => setSelectedPatient(patient.id)}
-                sx={{
-                  bgcolor: selectedPatient === patient.id ? 'action.hover' : 'inherit',
-                  borderLeft: unreadCount > 0 ? `3px solid ${theme.palette.primary.main}` : 'none',
-                  '&:hover': {
-                    bgcolor: 'action.hover',
-                  }
-                }}
-              >
-                <ListItemAvatar>
-                  <Badge
-                    overlap="circular"
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    variant="dot"
-                    color={patient.status === 'online' ? 'success' : 'default'}
-                  >
-                    <Avatar src={patient.avatar} alt={patient.name} />
-                  </Badge>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={
-                    <Typography 
-                      variant="subtitle2" 
-                      noWrap 
-                      sx={{ 
-                        fontWeight: unreadCount > 0 ? 'bold' : 'normal',
-                        maxWidth: '150px'
-                      }}
-                    >
-                      {patient.name}
-                    </Typography>
-                  }
-                  secondary={
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      noWrap
-                      sx={{
-                        maxWidth: '200px',
-                        fontWeight: unreadCount > 0 ? 'bold' : 'normal'
-                      }}
-                    >
-                      {lastMessage?.text || 'No messages yet'}
-                    </Typography>
-                  }
-                />
-                {unreadCount > 0 && (
-                  <Badge 
-                    badgeContent={unreadCount} 
-                    color="primary" 
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </ListItem>
-            );
-          })}
-        </List>
-      </Box>
-    </div>
-  );
+  const handleSendMessage = () => {
+    if (!composeData.to || !composeData.subject || !composeData.message) {
+      setSnackbar({ open: true, message: 'Please fill in all fields', severity: 'error' });
+      return;
+    }
 
-  const renderMessageContent = () => {
-    if (!selectedPatient) {
-      return (
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          height: '100%',
-          p: 3,
-          textAlign: 'center'
-        }}>
-          <Box sx={{ 
-            width: 56, 
-            height: 56, 
-            bgcolor: 'action.hover', 
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            mb: 2
-          }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-            </svg>
-          </Box>
-          <Typography variant="h6" color="text.secondary">
-            Select a patient to start messaging
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Or search for a patient in the sidebar
-          </Typography>
-        </Box>
+    // In production, this would send via API
+    console.log('Sending message:', composeData);
+    setSnackbar({ open: true, message: 'Message sent successfully!', severity: 'success' });
+    setOpenCompose(false);
+    setComposeData({ to: '', subject: '', message: '' });
+  };
+
+  const filterMessages = () => {
+    let filtered = messages;
+
+    // Filter by tab
+    if (selectedTab === 1) {
+      filtered = filtered.filter(m => m.starred);
+    } else if (selectedTab === 2) {
+      filtered = filtered.filter(m => m.type === 'sent');
+    }
+
+    // Filter by search
+    if (searchQuery) {
+      filtered = filtered.filter(m =>
+        m.from.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.preview.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-
-    return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {/* Message Header */}
-        <Box sx={{ 
-          p: 2, 
-          borderBottom: 1, 
-          borderColor: 'divider',
-          display: 'flex',
-          alignItems: 'center',
-          bgcolor: 'background.paper',
-          position: 'sticky',
-          top: 0,
-          zIndex: 1
-        }}>
-          <IconButton 
-            onClick={() => setSelectedPatient(null)} 
-            sx={{ display: { md: 'none' }, mr: 1 }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Avatar 
-            src={currentPatient?.avatar} 
-            alt={currentPatient?.name}
-            sx={{ mr: 2 }}
-          />
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle1" noWrap>
-              {currentPatient?.name}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {currentPatient?.status === 'online' ? 'Online' : `Last seen ${currentPatient?.lastSeen}`}
-            </Typography>
-          </Box>
-          <IconButton>
-            <MoreVertIcon />
-          </IconButton>
-        </Box>
-
-        {/* Messages */}
-        <Box sx={{ 
-          flexGrow: 1, 
-          overflowY: 'auto', 
-          p: 2,
-          bgcolor: 'background.default',
-          '&::-webkit-scrollbar': {
-            width: '6px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: 'transparent',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: '#888',
-            borderRadius: '3px',
-          },
-          '&::-webkit-scrollbar-thumb:hover': {
-            background: '#555',
-          }
-        }}>
-          {isLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : messages.length === 0 ? (
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              height: '100%',
-              color: 'text.secondary'
-            }}>
-              <Typography>No messages yet</Typography>
-              <Typography variant="body2">Send a message to start the conversation</Typography>
-            </Box>
-          ) : (
-            messages.map((message) => (
-              <Box
-                key={message.id}
-                sx={{
-                  display: 'flex',
-                  justifyContent: message.sender === 'd1' ? 'flex-end' : 'flex-start',
-                  mb: 2,
-                }}
-              >
-                <Box
-                  sx={{
-                    maxWidth: '70%',
-                    p: 1.5,
-                    borderRadius: 2,
-                    bgcolor: message.sender === 'd1' 
-                      ? 'primary.main' 
-                      : 'background.paper',
-                    color: message.sender === 'd1' ? 'primary.contrastText' : 'text.primary',
-                    boxShadow: 1,
-                    position: 'relative',
-                  }}
-                >
-                  <Typography variant="body2">
-                    {message.text}
-                  </Typography>
-                  <Typography 
-                    variant="caption" 
-                    sx={{
-                      display: 'block',
-                      textAlign: 'right',
-                      mt: 0.5,
-                      color: message.sender === 'd1' 
-                        ? 'rgba(255, 255, 255, 0.7)' 
-                        : 'text.secondary',
-                      fontSize: '0.7rem'
-                    }}
-                  >
-                    {format(new Date(message.timestamp), 'h:mm a')}
-                  </Typography>
-                </Box>
-              </Box>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </Box>
-
-        {/* Message Input */}
-        <Box 
-          component="form" 
-          onSubmit={handleSendMessage}
-          sx={{ 
-            p: 2, 
-            borderTop: 1, 
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            position: 'sticky',
-            bottom: 0
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton>
-              <AttachFileIcon />
-            </IconButton>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="Type a message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              size="small"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 4,
-                  bgcolor: 'background.paper',
-                },
-                mr: 1
-              }}
-              InputProps={{
-                endAdornment: (
-                  <IconButton>
-                    <InsertEmoticonIcon />
-                  </IconButton>
-                ),
-              }}
-            />
-            <Button 
-              type="submit" 
-              variant="contained" 
-              color="primary"
-              disabled={!newMessage.trim()}
-              sx={{ 
-                borderRadius: 4,
-                minWidth: 'auto',
-                p: '8px 16px',
-                ml: 1
-              }}
-            >
-              <SendIcon />
-            </Button>
-          </Box>
-        </Box>
-      </Box>
-    );
+    return filtered;
   };
 
-  // App bar for mobile view
-  const appBar = (
-    <Box 
-      sx={{
-        display: { xs: 'flex', md: 'none' },
-        alignItems: 'center',
-        bgcolor: 'background.paper',
-        p: 1,
-        borderBottom: 1,
-        borderColor: 'divider',
-        position: 'sticky',
-        top: 0,
-        zIndex: theme.zIndex.appBar,
-      }}
-    >
-      <IconButton
-        color="inherit"
-        aria-label="open drawer"
-        edge="start"
-        onClick={handleDrawerToggle}
-        sx={{ mr: 2 }}
-      >
-        <MenuIcon />
-      </IconButton>
-      <Typography variant="h6" noWrap component="div">
-        {currentPatient ? currentPatient.name : 'Messages'}
-      </Typography>
-    </Box>
-  );
+  const filteredMessages = filterMessages();
+  const unreadCount = messages.filter(m => !m.read).length;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {appBar}
-      <Box sx={{ display: 'flex', flex: 1, pt: { xs: '56px', md: 0 } }}>
-        {/* Mobile drawer */}
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
-          }}
-          sx={{
-            display: { xs: 'block', md: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
-          }}
-        >
-          {drawer}
-        </Drawer>
-
-        {/* Desktop drawer */}
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', md: 'block' },
-            '& .MuiDrawer-paper': { 
-              boxSizing: 'border-box', 
-              width: drawerWidth,
-              position: 'relative',
-              height: 'calc(100vh - 64px)',
-              borderRight: 'none',
-              borderTopRightRadius: 16,
-              borderBottomRightRadius: 16,
-              boxShadow: 2,
-              overflow: 'hidden',
-              mr: 2
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-
-        <Box 
-          component="main" 
-          sx={{ 
-            flexGrow: 1, 
-            p: 0,
-            width: { md: `calc(100% - ${drawerWidth + 24}px)` },
-            height: 'calc(100vh - 64px)',
-            display: 'flex',
-            flexDirection: 'column',
-            bgcolor: 'background.default',
-            borderRadius: 2,
-            overflow: 'hidden',
-            boxShadow: 2,
-            mr: 2
-          }}
-        >
-          {renderMessageContent()}
+    <Box>
+      {/* Header */}
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+            Messages
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Communicate with staff and patients
+          </Typography>
         </Box>
+        <Button
+          variant="contained"
+          startIcon={<CreateIcon />}
+          onClick={() => setOpenCompose(true)}
+          sx={{ textTransform: 'none' }}
+        >
+          Compose
+        </Button>
       </Box>
+
+      {/* Search and Tabs */}
+      <Paper sx={{ mb: 3 }}>
+        <Box sx={{ p: 2 }}>
+          <TextField
+            fullWidth
+            placeholder="Search messages..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              )
+            }}
+          />
+        </Box>
+        <Tabs
+          value={selectedTab}
+          onChange={handleTabChange}
+          variant="fullWidth"
+          sx={{ borderTop: 1, borderColor: 'divider' }}
+        >
+          <Tab 
+            label={
+              <Badge badgeContent={unreadCount} color="error">
+                Inbox
+              </Badge>
+            } 
+          />
+          <Tab label="Starred" />
+          <Tab label="Sent" />
+        </Tabs>
+      </Paper>
+
+      <Grid container spacing={3}>
+        {/* Message List */}
+        <Grid item xs={12} md={selectedMessage ? 5 : 12}>
+          <Paper>
+            <List sx={{ p: 0 }}>
+              {filteredMessages.length > 0 ? (
+                filteredMessages.map((message, index) => (
+                  <React.Fragment key={message.id}>
+                    <ListItem
+                      disablePadding
+                      secondaryAction={
+                        <IconButton 
+                          edge="end" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStarToggle(message.id);
+                          }}
+                        >
+                          {message.starred ? <StarIcon color="warning" /> : <StarBorderIcon />}
+                        </IconButton>
+                      }
+                    >
+                      <ListItemButton
+                        onClick={() => handleMessageClick(message)}
+                        selected={selectedMessage?.id === message.id}
+                        sx={{
+                          bgcolor: !message.read ? 'action.hover' : 'transparent'
+                        }}
+                      >
+                        <ListItemAvatar>
+                          <Avatar sx={{ bgcolor: 'primary.main' }}>
+                            {message.from.charAt(0)}
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Box 
+                                component="span"
+                                sx={{ fontWeight: !message.read ? 700 : 400, fontSize: '0.875rem' }}
+                              >
+                                {message.from}
+                              </Box>
+                              <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                                {new Date(message.timestamp).toLocaleDateString()}
+                              </Box>
+                            </Box>
+                          }
+                          secondary={
+                            <Box component="span">
+                              <Box
+                                component="span"
+                                sx={{ 
+                                  display: 'block',
+                                  fontWeight: !message.read ? 600 : 400,
+                                  mb: 0.5,
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                {message.subject}
+                              </Box>
+                              <Box
+                                component="span"
+                                sx={{
+                                  display: 'block',
+                                  color: 'text.secondary',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  fontSize: '0.875rem'
+                                }}
+                              >
+                                {message.preview}
+                              </Box>
+                            </Box>
+                          }
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                    {index < filteredMessages.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))
+              ) : (
+                <ListItem>
+                  <ListItemText
+                    primary="No messages"
+                    secondary={searchQuery ? "No messages match your search" : "Your inbox is empty"}
+                    sx={{ textAlign: 'center', py: 4 }}
+                  />
+                </ListItem>
+              )}
+            </List>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Compose Dialog */}
+      <Dialog open={openCompose} onClose={() => setOpenCompose(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">New Message</Typography>
+            <IconButton onClick={() => setOpenCompose(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ pt: 2 }}>
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel>To</InputLabel>
+              <Select
+                name="to"
+                value={composeData.to}
+                onChange={handleComposeChange}
+                label="To"
+              >
+                <MenuItem value="nurse.mary@hospital.com">Nurse Mary Johnson</MenuItem>
+                <MenuItem value="admin@hospital.com">Admin Department</MenuItem>
+                <MenuItem value="lab@hospital.com">Lab Department</MenuItem>
+                <MenuItem value="patient.john@example.com">Patient John Doe</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              fullWidth
+              label="Subject"
+              name="subject"
+              value={composeData.subject}
+              onChange={handleComposeChange}
+              sx={{ mb: 3 }}
+            />
+
+            <TextField
+              fullWidth
+              label="Message"
+              name="message"
+              value={composeData.message}
+              onChange={handleComposeChange}
+              multiline
+              rows={8}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={() => setOpenCompose(false)}>Cancel</Button>
+          <Button 
+            variant="contained" 
+            startIcon={<SendIcon />}
+            onClick={handleSendMessage}
+          >
+            Send
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Message Dialog */}
+      <Dialog open={openViewDialog} onClose={() => setOpenViewDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Message Details</Typography>
+            <IconButton onClick={() => setOpenViewDialog(false)} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedMessage && (
+            <Box>
+              <Box sx={{ mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar sx={{ bgcolor: 'primary.main', width: 48, height: 48 }}>
+                      {selectedMessage.from.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="h6">{selectedMessage.from}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {selectedMessage.fromEmail}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Box>
+                    <IconButton size="small">
+                      <ReplyIcon />
+                    </IconButton>
+                    <IconButton size="small">
+                      <DeleteIcon />
+                    </IconButton>
+                    <IconButton size="small">
+                      <MoreVertIcon />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                <Typography variant="h5" sx={{ mb: 1, fontWeight: 600 }}>
+                  {selectedMessage.subject}
+                </Typography>
+
+                <Typography variant="caption" color="text.secondary">
+                  {new Date(selectedMessage.timestamp).toLocaleString()}
+                </Typography>
+              </Box>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
+                {selectedMessage.body}
+              </Typography>
+
+              <Box sx={{ mt: 4, display: 'flex', gap: 2 }}>
+                <Button variant="contained" startIcon={<ReplyIcon />}>
+                  Reply
+                </Button>
+                <Button variant="outlined">
+                  Forward
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenViewDialog(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

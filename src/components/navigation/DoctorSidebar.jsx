@@ -59,24 +59,6 @@ const DoctorSidebar = ({ open, onClose }) => {
       color: '#ed6c02'
     },
     {
-      text: t('nav.prescriptions', 'Prescriptions'),
-      icon: <LocalPharmacyIcon />,
-      path: '/doctor-prescriptions',
-      color: '#9c27b0'
-    },
-    {
-      text: t('nav.medicalRecords', 'Medical Records'),
-      icon: <AssignmentIcon />,
-      path: '/doctor-medical-records',
-      color: '#d32f2f'
-    },
-    {
-      text: t('nav.consultations', 'Consultations'),
-      icon: <MedicalServicesIcon />,
-      path: '/doctor-consultations',
-      color: '#0288d1'
-    },
-    {
       text: t('nav.reports', 'Reports & Analytics'),
       icon: <AssessmentIcon />,
       path: '/doctor-reports',

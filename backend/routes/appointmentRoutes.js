@@ -243,6 +243,7 @@ router.get('/prescriptions', auth, async (req, res) => {
 
 // Get all appointments (filtered by facility, doctor, date)
 router.get('/', auth, async (req, res) => {
+  const mongoose = require('mongoose');
   try {
     // Build filter object
     const filter = {};
@@ -257,11 +258,20 @@ router.get('/', auth, async (req, res) => {
 
     // Add doctor filter if provided
     if (req.query.doctorId) {
+      // Validate ObjectId
+      if (!mongoose.Types.ObjectId.isValid(req.query.doctorId)) {
+        console.error('Invalid doctorId ObjectId:', req.query.doctorId);
+        return res.status(400).json({ error: 'Invalid doctorId' });
+      }
       filter.doctorId = req.query.doctorId;
     }
 
     // Add nurse filter if provided
     if (req.query.nurseId) {
+      if (!mongoose.Types.ObjectId.isValid(req.query.nurseId)) {
+        console.error('Invalid nurseId ObjectId:', req.query.nurseId);
+        return res.status(400).json({ error: 'Invalid nurseId' });
+      }
       filter.nurseId = req.query.nurseId;
     }
 
@@ -279,14 +289,23 @@ router.get('/', auth, async (req, res) => {
       };
     }
 
-    console.log('Appointment filter:', filter);
+    console.log('Appointment filter:', filter, 'Query params:', req.query);
 
-    const appointments = await Appointment.find(filter)
-      .populate('patientId doctorId nurseId', 'name email')
-      .sort({ date: 1 });
+    let appointments;
+    try {
+      appointments = await Appointment.find(filter)
+        .populate('patientId doctorId nurseId', 'name email')
+        .sort({ date: 1 });
+    } catch (err) {
+      if (err.name === 'CastError') {
+        console.error('CastError in Appointment.find:', err);
+        return res.status(400).json({ error: 'Invalid ObjectId in filter' });
+      }
+      throw err;
+    }
     res.json(appointments);
   } catch (err) {
-    console.error('Error fetching appointments:', err);
+    console.error('Error fetching appointments:', err, 'Query params:', req.query);
     res.status(500).json({ error: err.message });
   }
 });

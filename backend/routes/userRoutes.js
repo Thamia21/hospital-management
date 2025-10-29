@@ -30,7 +30,7 @@ router.get('/', auth, async (req, res) => {
     
     let filter = {};
     
-    // Only apply facility filtering if we have a valid facilityId
+    // ALL users (including ADMIN) must have facility filtering for patients
     if (facilityId) {
       // For patients, filter by facilityIds (array contains facilityId)
       if (role === 'PATIENT') {
@@ -40,21 +40,41 @@ router.get('/', auth, async (req, res) => {
       }
     } else if (role === 'PATIENT') {
       // If no facilityId is available for patients, return empty array
-      // This prevents doctors from seeing all patients across all facilities
+      // This prevents users from seeing all patients across all facilities
       console.log('No facilityId available for patient filtering, returning empty array');
       return res.json([]);
     }
 
     if (role === 'staff') {
       console.log('Fetching staff users (DOCTOR, NURSE)');
-      users = await User.find({ ...filter, role: { $in: ['DOCTOR', 'NURSE'] } });
-    } else {
-      console.log('Fetching all users');
-      users = await User.find(filter);
+      filter.role = { $in: ['DOCTOR', 'NURSE'] };
+    } else if (role) {
+      filter.role = role;
     }
+
+    console.log('Fetching users with filter:', JSON.stringify(filter));
+    users = await User.find(filter)
+      .populate('facilityId', 'name')
+      .populate('facilityIds', 'name');
     
-    console.log(`Found ${users.length} users`);
-    return res.json(users);
+    // Transform users to include facility names
+    const transformedUsers = users.map(user => {
+      const userObj = user.toObject();
+      
+      // Add facilityNames array for easier display
+      if (user.facilityIds && user.facilityIds.length > 0) {
+        userObj.facilityNames = user.facilityIds.map(f => f.name || f);
+      } else if (user.facilityId) {
+        userObj.facilityNames = [user.facilityId.name || user.facilityId];
+      } else {
+        userObj.facilityNames = [];
+      }
+      
+      return userObj;
+    });
+    
+    console.log(`Found ${transformedUsers.length} users`);
+    return res.json(transformedUsers);
   } catch (err) {
     console.error('Get Users Error:', err);
     return res.status(500).json({ error: err.message || 'Unknown error in users route' });
