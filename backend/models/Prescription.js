@@ -6,6 +6,10 @@ const prescriptionSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  patientUUID: {
+    type: String,
+    index: true
+  },
   doctorId: {
     type: String,
     required: true
@@ -53,9 +57,30 @@ const prescriptionSchema = new mongoose.Schema({
   refillsRemaining: {
     type: Number,
     default: 0
+  },
+  
+  // Facility tracking
+  facilityId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Facility',
+    index: true
+  },
+  facilityName: String,
+  
+  // Cross-hospital access
+  isSharedRecord: {
+    type: Boolean,
+    default: false
+  },
+  originFacilityId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Facility'
   }
 }, {
   timestamps: true
 });
+
+// Index for cross-hospital queries
+prescriptionSchema.index({ patientUUID: 1, facilityId: 1 });
 
 module.exports = mongoose.model('Prescription', prescriptionSchema);

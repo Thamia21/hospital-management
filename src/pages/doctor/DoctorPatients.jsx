@@ -18,26 +18,33 @@ import {
   InputAdornment,
   Container,
   Toolbar,
-  Button
+  Button,
+  Tabs,
+  Tab,
+  Chip
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Visibility as VisibilityIcon,
   MedicalServices as MedicalServicesIcon,
   Add as AddIcon,
-  PersonAdd as PersonAddIcon
+  PersonAdd as PersonAddIcon,
+  People as PeopleIcon,
+  PersonPin as PersonPinIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { userService } from '@/services/api';
+import { userService, patientService } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 
 const DoctorPatients = () => {
-  const [patients, setPatients] = useState([]);
+  const [allPatients, setAllPatients] = useState([]);
+  const [myPatients, setMyPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentTab, setCurrentTab] = useState(0); // 0 = All Patients, 1 = My Patients
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -49,19 +56,108 @@ const DoctorPatients = () => {
     try {
       setLoading(true);
       setError(null);
-      // Fetch all users from the backend
-      const users = await userService.getUsers();
-      // Filter to only patients
-      const patientsData = users.filter(u => u.role === 'PATIENT').map(patient => ({
-        id: patient._id || patient.id,
-        name: patient.name || patient.email,
-        email: patient.email || 'No email',
-        phone: patient.phone || patient.phoneNumber || 'No phone',
-        lastVisit: patient.lastVisit || 'No previous visits',
-        nextAppointment: patient.nextAppointment || null,
-        status: patient.status || 'Active',
-      }));
-      setPatients(patientsData);
+      
+      console.log('🔍 DoctorPatients: Fetching patients...');
+      console.log('User facilityId:', user?.facilityId);
+      
+      // Fetch all patients using the new API endpoint
+      const allPatientsData = await patientService.getPatientsList();
+      console.log('✅ All patients fetched:', allPatientsData.length);
+      
+      // Fetch appointments for each patient
+      const allPatientsWithAppointments = await Promise.all(
+        allPatientsData.map(async (patient) => {
+          try {
+            const appointments = await patientService.getAppointments(patient.id || patient._id);
+            // Find next upcoming appointment
+            const upcomingAppointments = appointments
+              .filter(apt => new Date(apt.date) >= new Date() && apt.status !== 'CANCELLED')
+              .sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            const nextAppointment = upcomingAppointments[0];
+            
+            return {
+              id: patient.id || patient._id,
+              name: patient.name || patient.email,
+              email: patient.email || 'No email',
+              phone: patient.phone || patient.phoneNumber || 'No phone',
+              facilityId: patient.facilityId?._id || patient.facilityId,
+              facilityName: patient.facilityName || 'No facility',
+              lastVisit: patient.lastVisit || 'No previous visits',
+              nextAppointment: nextAppointment ? 
+                `${new Date(nextAppointment.date).toLocaleDateString()} at ${nextAppointment.time || 'TBD'}` : 
+                'None scheduled',
+              status: patient.status || 'Active',
+            };
+          } catch (err) {
+            console.error(`Error fetching appointments for patient ${patient.id}:`, err);
+            return {
+              id: patient.id || patient._id,
+              name: patient.name || patient.email,
+              email: patient.email || 'No email',
+              phone: patient.phone || patient.phoneNumber || 'No phone',
+              facilityId: patient.facilityId?._id || patient.facilityId,
+              facilityName: patient.facilityName || 'No facility',
+              lastVisit: patient.lastVisit || 'No previous visits',
+              nextAppointment: 'None scheduled',
+              status: patient.status || 'Active',
+            };
+          }
+        })
+      );
+      
+      // Set all patients
+      setAllPatients(allPatientsWithAppointments);
+      
+      // Fetch facility-specific patients for "My Patients" tab
+      // Always call the API - backend will filter based on user's facilityId from database
+      console.log('🏥 Fetching facility patients (backend will filter by facilityId)');
+      const myPatientsData = await patientService.getPatientsList({ myPatientsOnly: true });
+      console.log('✅ My patients fetched:', myPatientsData.length);
+      
+      // Fetch appointments for facility patients
+      const myPatientsWithAppointments = await Promise.all(
+        myPatientsData.map(async (patient) => {
+          try {
+            const appointments = await patientService.getAppointments(patient.id || patient._id);
+            // Find next upcoming appointment
+            const upcomingAppointments = appointments
+              .filter(apt => new Date(apt.date) >= new Date() && apt.status !== 'CANCELLED')
+              .sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            const nextAppointment = upcomingAppointments[0];
+            
+            return {
+              id: patient.id || patient._id,
+              name: patient.name || patient.email,
+              email: patient.email || 'No email',
+              phone: patient.phone || patient.phoneNumber || 'No phone',
+              facilityId: patient.facilityId?._id || patient.facilityId,
+              facilityName: patient.facilityName || 'No facility',
+              lastVisit: patient.lastVisit || 'No previous visits',
+              nextAppointment: nextAppointment ? 
+                `${new Date(nextAppointment.date).toLocaleDateString()} at ${nextAppointment.time || 'TBD'}` : 
+                'None scheduled',
+              status: patient.status || 'Active',
+            };
+          } catch (err) {
+            console.error(`Error fetching appointments for patient ${patient.id}:`, err);
+            return {
+              id: patient.id || patient._id,
+              name: patient.name || patient.email,
+              email: patient.email || 'No email',
+              phone: patient.phone || patient.phoneNumber || 'No phone',
+              facilityId: patient.facilityId?._id || patient.facilityId,
+              facilityName: patient.facilityName || 'No facility',
+              lastVisit: patient.lastVisit || 'No previous visits',
+              nextAppointment: 'None scheduled',
+              status: patient.status || 'Active',
+            };
+          }
+        })
+      );
+      
+      setMyPatients(myPatientsWithAppointments);
     } catch (err) {
       console.error('Error fetching patients:', err);
       setError('Failed to load patients. Please try again later.');
@@ -92,7 +188,16 @@ const DoctorPatients = () => {
     navigate('/register-patient');
   };
 
-  const filteredPatients = patients.filter(patient =>
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+    setPage(0); // Reset to first page when switching tabs
+    setSearchTerm(''); // Clear search when switching tabs
+  };
+
+  // Get the current patient list based on selected tab
+  const currentPatientList = currentTab === 0 ? allPatients : myPatients;
+
+  const filteredPatients = currentPatientList.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (patient.phone && patient.phone.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -114,7 +219,7 @@ const DoctorPatients = () => {
     <Container maxWidth="xl">
       <Toolbar disableGutters sx={{ mb: 2, justifyContent: 'space-between' }}>
         <Typography variant="h4" component="h1">
-          My Patients
+          Patients
         </Typography>
         <Button
           variant="contained"
@@ -131,6 +236,48 @@ const DoctorPatients = () => {
           {error}
         </Alert>
       )}
+
+      {/* Tabs for All Patients vs My Patients */}
+      <Paper sx={{ mb: 2 }}>
+        <Tabs 
+          value={currentTab} 
+          onChange={handleTabChange}
+          indicatorColor="primary"
+          textColor="primary"
+          variant="fullWidth"
+        >
+          <Tab 
+            icon={<PeopleIcon />} 
+            iconPosition="start"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                All Patients
+                <Chip 
+                  label={allPatients.length} 
+                  size="small" 
+                  color="primary" 
+                  variant="outlined"
+                />
+              </Box>
+            }
+          />
+          <Tab 
+            icon={<PersonPinIcon />} 
+            iconPosition="start"
+            label={
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                My Patients
+                <Chip 
+                  label={myPatients.length} 
+                  size="small" 
+                  color="secondary" 
+                  variant="outlined"
+                />
+              </Box>
+            }
+          />
+        </Tabs>
+      </Paper>
 
       <Paper sx={{ width: '100%', mb: 2 }}>
         <Box sx={{ p: 2 }}>

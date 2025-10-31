@@ -48,6 +48,15 @@ router.get('/', auth, async (req, res) => {
     if (role === 'staff') {
       console.log('Fetching staff users (DOCTOR, NURSE)');
       filter.role = { $in: ['DOCTOR', 'NURSE'] };
+      
+      // Filter staff by facility if facilityIds parameter is provided
+      if (req.query.facilityIds) {
+        const facilityIds = Array.isArray(req.query.facilityIds) 
+          ? req.query.facilityIds 
+          : [req.query.facilityIds];
+        console.log('Filtering staff by patient facilityIds:', facilityIds);
+        filter.facilityIds = { $in: facilityIds };
+      }
     } else if (role) {
       filter.role = role;
     }
@@ -90,10 +99,9 @@ router.get('/:id', auth, async (req, res) => {
     let user;
 
     // Try to find by _id first (MongoDB ObjectId)
+    // Don't populate facilityId - return raw ObjectId for frontend comparison
     try {
-      user = await User.findById(req.params.id)
-        .populate('facilityId', 'name')
-        .populate('facilityIds', 'name');
+      user = await User.findById(req.params.id);
     } catch (error) {
       // If _id lookup fails, try uid lookup
       console.log('MongoDB _id lookup failed, trying uid lookup');
@@ -101,9 +109,7 @@ router.get('/:id', auth, async (req, res) => {
 
     // If _id lookup failed, try uid lookup
     if (!user) {
-      user = await User.findOne({ uid: req.params.id })
-        .populate('facilityId', 'name')
-        .populate('facilityIds', 'name');
+      user = await User.findOne({ uid: req.params.id });
     }
 
     console.log('User found:', user ? 'Yes' : 'No');
@@ -113,20 +119,11 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Transform the user object to include facility names
+    // Return user object with raw facilityId (ObjectId)
     const userObj = user.toObject();
 
-    // If facilityIds is populated, extract facility names
-    if (user.facilityIds && user.facilityIds.length > 0) {
-      userObj.facilityNames = user.facilityIds.map(f => f.name);
-    } else if (user.facilityId) {
-      // For backward compatibility with single facility
-      userObj.facilityNames = [user.facilityId.name];
-    } else {
-      userObj.facilityNames = [];
-    }
-
     console.log('Returning user data for ID/UID:', req.params.id);
+    console.log('User facilityId:', userObj.facilityId);
     res.json(userObj);
   } catch (err) {
     console.error('Error in GET /api/users/:id:', err);
@@ -166,7 +163,7 @@ router.post('/add-staff', auth, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const { name, email, role, department, specialization, licenseNumber } = req.body;
+    const { name, email, role, department, specialization, licenseNumber, facilityIds } = req.body;
     if (!['DOCTOR', 'NURSE'].includes(role)) {
       return res.status(400).json({ error: 'Role must be DOCTOR or NURSE' });
     }
@@ -182,6 +179,7 @@ router.post('/add-staff', auth, async (req, res) => {
       department,
       specialization,
       licenseNumber,
+      facilityIds: facilityIds || [], // Support multiple facility assignments
       isVerified: true // Admin-created staff are auto-verified
     });
     await user.save();

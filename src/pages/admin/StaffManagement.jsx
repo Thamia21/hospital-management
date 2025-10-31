@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Container, Paper, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Alert, Switch, TablePagination, InputAdornment
+  Box, Container, Paper, Typography, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Alert, Switch, TablePagination, InputAdornment, FormControl, InputLabel, Select, Chip, OutlinedInput
 } from '@mui/material';
 import { Edit, Delete, Search as SearchIcon, Block, CheckCircle, Download as DownloadIcon, PictureAsPdf as PdfIcon } from '@mui/icons-material';
 import { Bar } from 'react-chartjs-2';
@@ -19,11 +19,13 @@ const roles = [
 const StaffManagement = () => {
   const { user, token } = useAuth();
   const [staff, setStaff] = useState([]);
+  const [facilities, setFacilities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editStaff, setEditStaff] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [adminFacilityId, setAdminFacilityId] = useState(null);
 
   // Search, filters, and pagination
   const [search, setSearch] = useState('');
@@ -42,22 +44,68 @@ const StaffManagement = () => {
     return <Alert severity="error">Unauthorized: Only admins can manage staff.</Alert>;
   }
 
+  const fetchAdminData = async () => {
+    try {
+      // Fetch fresh admin data from backend (includes latest facilityId)
+      const res = await axios.get(`/api/users/${user?._id || user?.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('👤 Admin data from backend:', res.data);
+      setAdminFacilityId(res.data.facilityId);
+      return res.data.facilityId;
+    } catch (err) {
+      console.error('❌ Error fetching admin data:', err);
+      return null;
+    }
+  };
+
   const fetchStaff = async () => {
     setLoading(true);
     try {
+      // Get fresh admin facility ID from backend
+      const facilityId = await fetchAdminData();
+      
+      console.log('🔍 Fetching staff for admin facility:', facilityId);
       const res = await axios.get('/api/users?role=staff', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setStaff(res.data.filter(u => u.role === 'DOCTOR' || u.role === 'NURSE'));
+      
+      // Filter staff by role (DOCTOR or NURSE)
+      let staffList = res.data.filter(u => u.role === 'DOCTOR' || u.role === 'NURSE');
+      
+      // Filter by admin's facility if admin has a facility assigned
+      if (facilityId) {
+        staffList = staffList.filter(s => {
+          // Handle both populated and non-populated facilityId
+          const staffFacilityId = s.facilityId?._id || s.facilityId;
+          return staffFacilityId && staffFacilityId.toString() === facilityId.toString();
+        });
+        console.log(`✅ Filtered to ${staffList.length} staff in admin's facility`);
+      } else {
+        console.log('⚠️ Admin has no facility - showing all staff');
+      }
+      
+      setStaff(staffList);
     } catch (err) {
+      console.error('❌ Error fetching staff:', err);
       setError('Failed to fetch staff.');
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchFacilities = async () => {
+    try {
+      const res = await axios.get('/api/facilities');
+      setFacilities(res.data);
+    } catch (err) {
+      console.error('Failed to fetch facilities:', err);
+    }
+  };
+
   useEffect(() => {
     fetchStaff();
+    fetchFacilities();
     // eslint-disable-next-line
   }, []);
 
@@ -69,6 +117,14 @@ const StaffManagement = () => {
   const handleEditChange = (e) => {
     const { name, value } = e.target;
     setEditStaff(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFacilityChange = (event) => {
+    const { value } = event.target;
+    setEditStaff(prev => ({
+      ...prev,
+      facilityIds: typeof value === 'string' ? value.split(',') : value
+    }));
   };
 
   const handleEditSave = async () => {
@@ -229,7 +285,25 @@ const StaffManagement = () => {
     <Box sx={{ minHeight: '100vh', bgcolor: '#f7fafd', py: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Container maxWidth="md">
         <Paper elevation={6} sx={{ borderRadius: 4, p: { xs: 2, sm: 6 }, boxShadow: 6 }}>
-          <Typography variant="h5" sx={{ mb: 4, fontWeight: 600 }}>Staff Management</Typography>
+          <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>Staff Management</Typography>
+          
+          {/* Facility Info Banner */}
+          {adminFacilityId && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                <strong>Facility-Based Management:</strong> You are managing staff for your assigned facility only.
+                {staff.length === 0 && ' No staff members found in your facility.'}
+              </Typography>
+            </Alert>
+          )}
+          
+          {!adminFacilityId && !loading && (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                <strong>No Facility Assigned:</strong> You are viewing all staff across all facilities.
+              </Typography>
+            </Alert>
+          )}
           {/* Analytics/statistics */}
           <Box sx={{ mb: 2, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
             <Paper sx={{ p: 2, minWidth: 120, bgcolor: '#e3f2fd' }}>
@@ -376,6 +450,7 @@ const StaffManagement = () => {
                       <TableCell>Role</TableCell>
                       <TableCell>Department</TableCell>
                       <TableCell>Specialization</TableCell>
+                      <TableCell>Facilities</TableCell>
                       <TableCell>License #</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Actions</TableCell>
@@ -397,6 +472,17 @@ const StaffManagement = () => {
                         <TableCell>{s.role}</TableCell>
                         <TableCell>{s.department}</TableCell>
                         <TableCell>{s.specialization}</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {s.facilityNames && s.facilityNames.length > 0 ? (
+                              s.facilityNames.map((name, idx) => (
+                                <Chip key={idx} label={name} size="small" color="primary" variant="outlined" />
+                              ))
+                            ) : (
+                              <Typography variant="caption" color="text.secondary">No facilities</Typography>
+                            )}
+                          </Box>
+                        </TableCell>
                         <TableCell>{s.licenseNumber}</TableCell>
                         <TableCell>
                           <Switch
@@ -444,6 +530,34 @@ const StaffManagement = () => {
             <TextField label="Department" name="department" value={editStaff?.department || ''} onChange={handleEditChange} fullWidth sx={{ mb: 2 }} />
             <TextField label="Specialization" name="specialization" value={editStaff?.specialization || ''} onChange={handleEditChange} fullWidth sx={{ mb: 2 }} />
             <TextField label="License Number" name="licenseNumber" value={editStaff?.licenseNumber || ''} onChange={handleEditChange} fullWidth sx={{ mb: 2 }} />
+            
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel id="facility-select-label">Facilities</InputLabel>
+              <Select
+                labelId="facility-select-label"
+                id="facility-select"
+                multiple
+                value={editStaff?.facilityIds || []}
+                onChange={handleFacilityChange}
+                input={<OutlinedInput label="Facilities" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => {
+                      const facility = facilities.find(f => f._id === value);
+                      return (
+                        <Chip key={value} label={facility?.name || value} size="small" />
+                      );
+                    })}
+                  </Box>
+                )}
+              >
+                {facilities.map((facility) => (
+                  <MenuItem key={facility._id} value={facility._id}>
+                    {facility.name} - {facility.province}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>

@@ -203,6 +203,34 @@ export const patientService = {
     }
   },
 
+  async getPatientsList(options = {}) {
+    try {
+      const { myPatientsOnly = false, facilityId = null } = options;
+      const params = new URLSearchParams();
+      
+      if (myPatientsOnly) {
+        params.append('myPatientsOnly', 'true');
+      }
+      if (facilityId) {
+        params.append('facilityId', facilityId);
+      }
+
+      const url = `${API_URL}/patients/list${params.toString() ? '?' + params.toString() : ''}`;
+      console.log('📡 API Call:', url);
+      console.log('Options:', options);
+      
+      const response = await axios.get(url, {
+        headers: getAuthHeader()
+      });
+      console.log('📥 Response:', response.data?.length, 'patients');
+      return response.data || [];
+    } catch (error) {
+      console.error('❌ Error fetching patients list:', error);
+      console.error('Error details:', error.response?.status, error.response?.data);
+      throw new Error(error.message || 'Failed to get patients list');
+    }
+  },
+
   async getBills(userId) {
     try {
       const response = await axios.get(`${API_URL}/patients/${userId}/bills`, {
@@ -343,10 +371,21 @@ export const patientService = {
 
 // Doctor service
 export const doctorService = {
-  async getDoctors() {
+  async getDoctors(facilityIds = null) {
     try {
+      // Build query parameters
+      let queryParams = 'role=staff';
+      
+      // Add facility filtering if facilityIds are provided
+      if (facilityIds && Array.isArray(facilityIds) && facilityIds.length > 0) {
+        facilityIds.forEach(id => {
+          queryParams += `&facilityIds=${id}`;
+        });
+        console.log('Fetching doctors filtered by facilities:', facilityIds);
+      }
+      
       const response = await axios.get(
-        `${API_URL}/users?role=staff`,
+        `${API_URL}/users?${queryParams}`,
         { headers: getAuthHeader() }
       );
       
@@ -373,10 +412,13 @@ export const doctorService = {
             experience: doctor.experience,
             qualifications: doctor.qualifications,
             licenseNumber: doctor.licenseNumber,
+            facilityIds: doctor.facilityIds,
+            facilityNames: doctor.facilityNames,
             ...doctor
           };
         });
       
+      console.log(`Found ${doctors.length} doctors for facilities:`, facilityIds);
       return doctors;
     } catch (error) {
       console.error('Error fetching doctors:', error);
@@ -384,10 +426,21 @@ export const doctorService = {
     }
   },
 
-  async getNurses() {
+  async getNurses(facilityIds = null) {
     try {
+      // Build query parameters
+      let queryParams = 'role=staff';
+      
+      // Add facility filtering if facilityIds are provided
+      if (facilityIds && Array.isArray(facilityIds) && facilityIds.length > 0) {
+        facilityIds.forEach(id => {
+          queryParams += `&facilityIds=${id}`;
+        });
+        console.log('Fetching nurses filtered by facilities:', facilityIds);
+      }
+      
       const response = await axios.get(
-        `${API_URL}/users?role=staff`,
+        `${API_URL}/users?${queryParams}`,
         { headers: getAuthHeader() }
       );
       
@@ -414,11 +467,13 @@ export const doctorService = {
             experience: nurse.experience,
             qualifications: nurse.qualifications,
             licenseNumber: nurse.licenseNumber,
+            facilityIds: nurse.facilityIds,
+            facilityNames: nurse.facilityNames,
             ...nurse
           };
         });
       
-      console.log(`Found ${nurses.length} nurses`);
+      console.log(`Found ${nurses.length} nurses for facilities:`, facilityIds);
       return nurses;
     } catch (error) {
       console.error('Error fetching nurses:', error);
@@ -602,6 +657,7 @@ export const doctorService = {
   // Get doctor's appointments (MongoDB)
   async getDoctorAppointmentsMongo(doctorId) {
     try {
+      console.log('📅 Fetching appointments for doctor:', doctorId);
       const response = await axios.get(
         `${API_URL}/appointments`,
         {
@@ -609,9 +665,12 @@ export const doctorService = {
           params: { doctorId: doctorId }
         }
       );
+      console.log('✅ Doctor appointments received:', response.data?.length || 0, 'appointments');
+      console.log('Appointments data:', response.data);
       return response.data || [];
     } catch (error) {
-      console.error('Error fetching doctor appointments:', error);
+      console.error('❌ Error fetching doctor appointments:', error);
+      console.error('Error details:', error.response?.data);
       throw error;
     }
   },

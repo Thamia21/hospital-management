@@ -207,8 +207,8 @@ export default function PatientMedicalRecords() {
       ['Record ID', record._id || 'N/A'],
       ['Record Type', record.recordType?.replace('_', ' ') || 'Unknown'],
       ['Record Date', formatDate(record.recordDate || record.createdAt)],
-      ['Healthcare Provider', record.doctorName || record.provider || 'Unknown'],
-      ['Facility', record.facility || 'Not specified'],
+      ['Healthcare Provider', record.doctorId?.name || record.doctorName || record.provider || 'Unknown'],
+      ['Facility', record.facilityId?.name || record.facility || 'Not specified'],
       ['Diagnosis/Title', record.diagnosis || record.title || 'No title available'],
       ['Description', { content: record.description || record.notes || 'No description available', styles: { cellWidth: 'wrap' } }],
     ];
@@ -462,7 +462,7 @@ export default function PatientMedicalRecords() {
                           </ListItemIcon>
                           <ListItemText
                             primary="Healthcare Provider"
-                            secondary={record.doctorName || record.provider || 'Unknown'}
+                            secondary={record.doctorId?.name || record.doctorName || record.provider || 'Unknown'}
                           />
                         </ListItem>
                         <ListItem disableGutters>
@@ -474,14 +474,14 @@ export default function PatientMedicalRecords() {
                             secondary={formatDate(record.recordDate || record.createdAt)}
                           />
                         </ListItem>
-                        {record.facility && (
+                        {(record.facility || record.facilityId) && (
                           <ListItem disableGutters>
                             <ListItemIcon>
                               <HospitalIcon color="primary" />
                             </ListItemIcon>
                             <ListItemText
                               primary="Facility"
-                              secondary={record.facility}
+                              secondary={record.facilityId?.name || record.facility || 'Not specified'}
                             />
                           </ListItem>
                         )}
@@ -559,7 +559,7 @@ export default function PatientMedicalRecords() {
                     Healthcare Provider
                   </Typography>
                   <Typography variant="body1" sx={{ mb: 2 }}>
-                    {selectedRecord.doctorName || selectedRecord.provider || 'Unknown'}
+                    {selectedRecord.doctorId?.name || selectedRecord.doctorName || selectedRecord.provider || 'Unknown'}
                   </Typography>
 
                   <Typography variant="subtitle2" gutterBottom>
@@ -573,7 +573,7 @@ export default function PatientMedicalRecords() {
                     Facility
                   </Typography>
                   <Typography variant="body1" sx={{ mb: 2 }}>
-                    {selectedRecord.facility || 'Not specified'}
+                    {selectedRecord.facilityId?.name || selectedRecord.facility || 'Not specified'}
                   </Typography>
                 </Grid>
 

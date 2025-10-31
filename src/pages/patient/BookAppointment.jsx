@@ -119,18 +119,28 @@ export default function BookAppointment() {
     }
   }, [user?._id, user?.id, user?.uid]);
 
-  // Fetch available doctors
+  // Fetch available doctors (filtered by patient's facilities)
   const { 
     data: doctors = [], 
     isLoading: isLoadingDoctors,
     error: doctorsError
   } = useQuery({
-    queryKey: ['doctors'],
+    queryKey: ['doctors', user?.facilityIds],
     queryFn: async () => {
-      const result = await doctorService.getDoctors();
+      // Pass patient's facilityIds to filter doctors by facility
+      const patientFacilityIds = user?.facilityIds || [];
+      console.log('=== DOCTOR FETCH DEBUG ===');
+      console.log('User object:', user);
+      console.log('User facilityIds:', user?.facilityIds);
+      console.log('Patient facility IDs for query:', patientFacilityIds);
+      console.log('Facility IDs length:', patientFacilityIds.length);
+      
+      const result = await doctorService.getDoctors(patientFacilityIds);
+      console.log('Doctors fetched:', result?.length || 0);
+      console.log('Doctor results:', result);
       return result;
     },
-    enabled: staffType === 'doctor',
+    enabled: staffType === 'doctor',  // Removed facilityIds check to allow query to run
     retry: 1,
     onError: (error) => {
       console.error('Error fetching doctors:', error);
@@ -138,18 +148,23 @@ export default function BookAppointment() {
     }
   });
 
-  // Fetch available nurses
+  // Fetch available nurses (filtered by patient's facilities)
   const {
     data: nurses = [],
     isLoading: isLoadingNurses,
     error: nursesError
   } = useQuery({
-    queryKey: ['nurses'],
+    queryKey: ['nurses', user?.facilityIds],
     queryFn: async () => {
-      const result = await doctorService.getNurses();
+      // Pass patient's facilityIds to filter nurses by facility
+      const patientFacilityIds = user?.facilityIds || [];
+      console.log('=== NURSE FETCH DEBUG ===');
+      console.log('Patient facility IDs for query:', patientFacilityIds);
+      const result = await doctorService.getNurses(patientFacilityIds);
+      console.log('Nurses fetched:', result?.length || 0);
       return result;
     },
-    enabled: staffType === 'nurse',
+    enabled: staffType === 'nurse',  // Removed facilityIds check
     retry: 1,
     onError: (error) => {
       console.error('Error fetching nurses:', error);

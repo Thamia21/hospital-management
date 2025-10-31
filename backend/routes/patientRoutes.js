@@ -13,6 +13,56 @@ const Condition = require('../models/Condition');
 const Allergy = require('../models/Allergy');
 const auth = require('../middleware/auth');
 
+// GET /api/patients/list - Get patients list with optional facility filtering
+router.get('/list', auth, async (req, res) => {
+  try {
+    console.log('🔍 /api/patients/list route hit!');
+    console.log('Query params:', req.query);
+    console.log('User:', req.user);
+    
+    const { facilityId, myPatientsOnly } = req.query;
+    
+    // Build query filter
+    const filter = { role: 'PATIENT' };
+    
+    // If myPatientsOnly is true and user has facilityId, filter by facility
+    if (myPatientsOnly === 'true' && req.user.facilityId) {
+      filter.facilityId = req.user.facilityId;
+    } else if (facilityId) {
+      // Allow explicit facility filtering
+      filter.facilityId = facilityId;
+    }
+
+    // Get patients
+    const patients = await User.find(filter)
+      .select('name email phone phoneNumber facilityId lastVisit nextAppointment status')
+      .populate('facilityId', 'name')
+      .sort({ name: 1 });
+
+    // Transform data for frontend
+    const patientsData = patients.map(patient => ({
+      id: patient._id,
+      name: patient.name || patient.email,
+      email: patient.email || 'No email',
+      phone: patient.phone || patient.phoneNumber || 'No phone',
+      facilityId: patient.facilityId?._id || patient.facilityId,
+      facilityName: patient.facilityId?.name || 'No facility',
+      lastVisit: patient.lastVisit || 'No previous visits',
+      nextAppointment: patient.nextAppointment || null,
+      status: patient.status || 'Active',
+    }));
+
+    console.log(`✅ Returning ${patientsData.length} patients`);
+    res.json(patientsData);
+  } catch (error) {
+    console.error('❌ Error fetching patients list:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch patients list', 
+      error: error.message 
+    });
+  }
+});
+
 // GET /api/patients/stats - Get patient statistics for admin dashboard
 router.get('/stats', auth, async (req, res) => {
   try {
@@ -485,7 +535,10 @@ router.get('/:patientId/medical-records', verifyPatientAccess, async (req, res) 
     const { patientId } = req.params;
     console.log('Fetching medical records for patient:', patientId);
 
-    let records = await MedicalRecord.find({ patientId }).sort({ recordDate: -1 });
+    let records = await MedicalRecord.find({ patientId })
+      .populate('facilityId', 'name address phone')
+      .populate('doctorId', 'name email')
+      .sort({ recordDate: -1 });
     console.log('Found existing records:', records.length);
 
     if (records.length === 0) {
@@ -755,7 +808,10 @@ router.get('/doctors/:doctorId/patients/:patientId/medical-records', auth, async
   try {
     const { patientId } = req.params;
     // Optionally, check doctorId permissions here
-    const records = await MedicalRecord.find({ patientId }).sort({ recordDate: -1 });
+    const records = await MedicalRecord.find({ patientId })
+      .populate('facilityId', 'name address phone')
+      .populate('doctorId', 'name email')
+      .sort({ recordDate: -1 });
     res.json(records);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch medical records', error: error.message });

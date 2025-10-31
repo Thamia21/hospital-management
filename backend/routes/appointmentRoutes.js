@@ -128,8 +128,24 @@ router.post('/', auth, async (req, res) => {
 router.post('/medical-records', auth, async (req, res) => {
   try {
     console.log('Creating medical record:', req.body);
-    const medicalRecord = new MedicalRecord(req.body);
+    console.log('User from token:', req.user);
+    
+    // Enrich the medical record with doctor's facility and name
+    const recordData = {
+      ...req.body,
+      facilityId: req.body.facilityId || req.user.facilityId, // Use doctor's facility if not provided
+      doctorName: req.body.doctorName || req.user.name, // Use doctor's name if not provided
+    };
+    
+    console.log('Enriched medical record data:', recordData);
+    
+    const medicalRecord = new MedicalRecord(recordData);
     await medicalRecord.save();
+    
+    // Populate before returning
+    await medicalRecord.populate('facilityId', 'name address phone');
+    await medicalRecord.populate('doctorId', 'name email');
+    
     res.status(201).json(medicalRecord);
   } catch (err) {
     console.error('Error creating medical record:', err);
@@ -180,6 +196,7 @@ router.get('/medical-records', auth, async (req, res) => {
 
     const medicalRecords = await MedicalRecord.find(filter)
       .populate('patientId doctorId', 'name email')
+      .populate('facilityId', 'name address phone')
       .sort({ recordDate: -1 });
 
     res.json(medicalRecords);
@@ -248,14 +265,6 @@ router.get('/', auth, async (req, res) => {
     // Build filter object
     const filter = {};
 
-    // Add facility filter
-    const facilityId = req.user.role === 'ADMIN' && req.query.facilityId
-      ? req.query.facilityId
-      : req.user.facilityId;
-    if (facilityId) {
-      filter.facilityId = facilityId;
-    }
-
     // Add doctor filter if provided
     if (req.query.doctorId) {
       // Validate ObjectId
@@ -264,6 +273,16 @@ router.get('/', auth, async (req, res) => {
         return res.status(400).json({ error: 'Invalid doctorId' });
       }
       filter.doctorId = req.query.doctorId;
+      // Don't add facility filter when fetching specific doctor's appointments
+      // This allows doctors to see all their appointments regardless of facility changes
+    } else {
+      // Add facility filter only when not filtering by specific doctor/nurse
+      const facilityId = req.user.role === 'ADMIN' && req.query.facilityId
+        ? req.query.facilityId
+        : req.user.facilityId;
+      if (facilityId) {
+        filter.facilityId = facilityId;
+      }
     }
 
     // Add nurse filter if provided
@@ -273,6 +292,8 @@ router.get('/', auth, async (req, res) => {
         return res.status(400).json({ error: 'Invalid nurseId' });
       }
       filter.nurseId = req.query.nurseId;
+      // Don't add facility filter when fetching specific nurse's appointments
+      // This allows nurses to see all their appointments regardless of facility changes
     }
 
     // Add date filter if provided

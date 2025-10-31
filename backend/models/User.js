@@ -28,6 +28,9 @@ const userSchema = new mongoose.Schema({
   facilityIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Facility' }],
   facilityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Facility' },
   
+  // Cross-hospital patient identification (for patients only)
+  patientUUID: { type: String, unique: true, sparse: true, index: true },
+  
   // Verification and security
   isVerified: { type: Boolean, default: false },
   verificationToken: { type: String },
@@ -35,6 +38,11 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: { type: Date },
   createdAt: { type: Date, default: Date.now },
   healthSummary: { type: String },
+  
+  // POPIA compliance fields
+  dataProcessingConsent: { type: Boolean, default: false },
+  consentDate: { type: Date },
+  lastConsentUpdate: { type: Date }
 });
 
 // Generate a unique userId before saving
